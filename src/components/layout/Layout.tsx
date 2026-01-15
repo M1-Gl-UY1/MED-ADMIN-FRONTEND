@@ -10,7 +10,6 @@ import {
   X,
   ChevronLeft,
 } from 'lucide-react';
-import logoMed from '../../assets/logo_med_sans_fond.png';
 import logoMedBlanc from '../../assets/logo_med.jpeg';
 
 const navigation = [

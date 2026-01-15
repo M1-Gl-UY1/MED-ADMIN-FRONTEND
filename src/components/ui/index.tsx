@@ -1,15 +1,16 @@
-import { ReactNode, HTMLAttributes } from 'react';
-import { LucideIcon } from 'lucide-react';
+import type { ReactNode, HTMLAttributes } from 'react';
+import type { LucideIcon } from 'lucide-react';
 
 // Card components
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
+  hover?: boolean;
 }
 
-export function Card({ children, className = '', ...props }: CardProps) {
+export function Card({ children, className = '', hover = false, ...props }: CardProps) {
   return (
     <div
-      className={`bg-white rounded-xl shadow-sm border border-gray-100 ${className}`}
+      className={`bg-white rounded-xl shadow-sm border border-gray-100 ${hover ? 'transition-shadow hover:shadow-md cursor-pointer' : ''} ${className}`}
       {...props}
     >
       {children}
@@ -74,7 +75,7 @@ export function StatCard({ title, value, icon: Icon, trend }: StatCardProps) {
 }
 
 // Badge component
-type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral';
+export type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'default' | 'premium';
 
 interface BadgeProps {
   children: ReactNode;
@@ -88,6 +89,8 @@ const badgeVariants: Record<BadgeVariant, string> = {
   error: 'bg-red-100 text-red-800',
   info: 'bg-blue-100 text-blue-800',
   neutral: 'bg-gray-100 text-gray-800',
+  default: 'bg-gray-100 text-gray-800',
+  premium: 'bg-amber-100 text-amber-800',
 };
 
 export function Badge({ children, variant = 'neutral', className = '' }: BadgeProps) {
@@ -270,6 +273,133 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
           <div className="p-6">{children}</div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Pagination component
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  totalItems?: number;
+  itemsPerPage?: number;
+  onItemsPerPageChange?: (itemsPerPage: number) => void;
+  itemsPerPageOptions?: number[];
+  className?: string;
+}
+
+export function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+  totalItems,
+  itemsPerPage,
+  onItemsPerPageChange,
+  itemsPerPageOptions = [10, 20, 50],
+  className = ''
+}: PaginationProps) {
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const showEllipsis = totalPages > 7;
+
+    if (!showEllipsis) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
+
+  if (totalPages <= 1 && !onItemsPerPageChange) return null;
+
+  const startItem = totalItems && itemsPerPage ? (currentPage - 1) * itemsPerPage + 1 : 0;
+  const endItem = totalItems && itemsPerPage ? Math.min(currentPage * itemsPerPage, totalItems) : 0;
+
+  return (
+    <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 p-4 ${className}`}>
+      {/* Items info and per page selector */}
+      <div className="flex items-center gap-4 text-sm text-gray-600">
+        {totalItems !== undefined && itemsPerPage !== undefined && (
+          <span>
+            {startItem}-{endItem} sur {totalItems}
+          </span>
+        )}
+        {onItemsPerPageChange && itemsPerPage && (
+          <div className="flex items-center gap-2">
+            <span>Afficher</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
+              className="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-secondary"
+            >
+              {itemsPerPageOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Page navigation */}
+      {totalPages > 1 && (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          {getPageNumbers().map((page, index) => (
+            <button
+              key={index}
+              onClick={() => typeof page === 'number' && onPageChange(page)}
+              disabled={page === '...'}
+              className={`min-w-[36px] h-9 px-3 rounded-lg text-sm font-medium transition-colors ${
+                page === currentPage
+                  ? 'bg-secondary text-primary'
+                  : page === '...'
+                  ? 'cursor-default text-gray-400'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+
+          <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import { Bell, Search, User, Menu } from 'lucide-react';
-import logoMed from '../../assets/logo_med_sans_fond.png';
 
 interface HeaderProps {
   title: string;
