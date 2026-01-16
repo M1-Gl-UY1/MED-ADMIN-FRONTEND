@@ -12,20 +12,31 @@ import {
   Trash2,
   Eye,
   ChevronRight,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
+  X,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
-import { Card, CardContent, Badge, Button, Pagination } from '../components/ui';
-import {
-  clients,
-  societes,
-  commandes,
-  formatDate,
-  formatPrice,
-  type Client,
-  type Societe,
-} from '../data/mockData';
+import { Card, CardContent, Badge, Button, Pagination, Alert } from '../components/ui';
+import { clientService, societeService } from '../services';
+import type { Client, Societe } from '../services/types';
 
 type TabType = 'clients' | 'societes';
+
+const formatDate = (dateString: string): string => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+};
+
+const formatPrice = (price: number): string => {
+  return new Intl.NumberFormat('fr-FR').format(price) + ' FCFA';
+};
 
 export default function Clients() {
   const [activeTab, setActiveTab] = useState<TabType>('clients');
@@ -33,17 +44,51 @@ export default function Clients() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
 
+  // API states
+  const [clients, setClients] = useState<Client[]>([]);
+  const [societes, setSocietes] = useState<Societe[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Modal states
+  const [showAddClientModal, setShowAddClientModal] = useState(false);
+  const [showAddSocieteModal, setShowAddSocieteModal] = useState(false);
+
+  // Charger les données depuis l'API
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [clientsData, societesData] = await Promise.all([
+        clientService.getAll(),
+        societeService.getAll(),
+      ]);
+      setClients(clientsData);
+      setSocietes(societesData);
+    } catch (err: any) {
+      console.error('Erreur lors du chargement:', err);
+      setError(err.message || 'Impossible de charger les données depuis le serveur');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   const filteredClients = clients.filter(
     (c) =>
-      c.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.email.toLowerCase().includes(searchTerm.toLowerCase())
+      (c.nom || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.prenom || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.email || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredSocietes = societes.filter(
     (s) =>
-      s.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.email.toLowerCase().includes(searchTerm.toLowerCase())
+      (s.nom || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (s.email || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Only keep parent societies (not filiales)
@@ -73,13 +118,37 @@ export default function Clients() {
     setCurrentPage(1);
   };
 
-  const getClientCommandes = (userId: number) => {
-    return commandes.filter((c) => c.utilisateurId === userId);
-  };
+  if (loading) {
+    return (
+      <div>
+        <Header title="Clients" subtitle="Gérez vos clients et sociétés" />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-secondary mx-auto mb-4" />
+            <p className="text-text-light">Chargement des clients...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  const getClientTotalSpent = (userId: number) => {
-    return getClientCommandes(userId).reduce((acc, c) => acc + c.montantTTC, 0);
-  };
+  if (error) {
+    return (
+      <div>
+        <Header title="Clients" subtitle="Gérez vos clients et sociétés" />
+        <div className="p-4 sm:p-6">
+          <Alert variant="error" className="mb-4">
+            <AlertCircle className="w-4 h-4" />
+            <span>{error}</span>
+          </Alert>
+          <Button onClick={fetchData} variant="primary">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -127,7 +196,11 @@ export default function Clients() {
               className="input pl-10 text-sm sm:text-base"
             />
           </div>
-          <Button variant="primary" className="w-full sm:w-auto">
+          <Button
+            variant="primary"
+            className="w-full sm:w-auto"
+            onClick={() => activeTab === 'clients' ? setShowAddClientModal(true) : setShowAddSocieteModal(true)}
+          >
             <Plus className="w-4 h-4 mr-2" />
             <span className="sm:hidden">Ajouter</span>
             <span className="hidden sm:inline">Ajouter {activeTab === 'clients' ? 'un client' : 'une société'}</span>
@@ -140,10 +213,8 @@ export default function Clients() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {paginatedClients.map((client) => (
                 <ClientCard
-                  key={client.id}
+                  key={client.idClient || client.id}
                   client={client}
-                  commandesCount={getClientCommandes(client.id).length}
-                  totalSpent={getClientTotalSpent(client.id)}
                 />
               ))}
               {filteredClients.length === 0 && (
@@ -172,11 +243,9 @@ export default function Clients() {
             <div className="space-y-4">
               {paginatedSocietes.map((societe) => (
                 <SocieteCard
-                  key={societe.id}
+                  key={societe.idSociete || societe.id}
                   societe={societe}
-                  filiales={societes.filter((s) => s.societeMereId === societe.id)}
-                  commandesCount={getClientCommandes(societe.id).length}
-                  totalSpent={getClientTotalSpent(societe.id)}
+                  filiales={societes.filter((s) => s.societeMereId === (societe.idSociete || societe.id))}
                 />
               ))}
               {parentSocietes.length === 0 && (
@@ -202,19 +271,32 @@ export default function Clients() {
           </>
         )}
       </div>
+
+      {/* Modals */}
+      {showAddClientModal && (
+        <AddClientModal
+          onClose={() => setShowAddClientModal(false)}
+          onSuccess={(newClient) => {
+            setClients(prev => [...prev, newClient]);
+            setShowAddClientModal(false);
+          }}
+        />
+      )}
+
+      {showAddSocieteModal && (
+        <AddSocieteModal
+          onClose={() => setShowAddSocieteModal(false)}
+          onSuccess={(newSociete) => {
+            setSocietes(prev => [...prev, newSociete]);
+            setShowAddSocieteModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function ClientCard({
-  client,
-  commandesCount,
-  totalSpent,
-}: {
-  client: Client;
-  commandesCount: number;
-  totalSpent: number;
-}) {
+function ClientCard({ client }: { client: Client }) {
   const [showMenu, setShowMenu] = useState(false);
 
   return (
@@ -224,14 +306,16 @@ function ClientCard({
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
               <span className="text-lg font-bold text-secondary">
-                {client.prenom[0]}{client.nom[0]}
+                {(client.prenom || 'C')[0]}{(client.nom || 'L')[0]}
               </span>
             </div>
             <div>
               <h3 className="font-semibold text-primary">{client.prenom} {client.nom}</h3>
-              <Badge variant={client.genre === 'M' ? 'info' : 'premium'}>
-                {client.genre === 'M' ? 'Homme' : 'Femme'}
-              </Badge>
+              {client.genre && (
+                <Badge variant={client.genre === 'M' ? 'info' : 'premium'}>
+                  {client.genre === 'M' ? 'Homme' : 'Femme'}
+                </Badge>
+              )}
             </div>
           </div>
           <div className="relative">
@@ -260,11 +344,11 @@ function ClientCard({
         <div className="space-y-2 mb-4">
           <div className="flex items-center gap-2 text-sm text-text-light">
             <Mail className="w-4 h-4" />
-            <span>{client.email}</span>
+            <span>{client.email || 'N/A'}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-text-light">
             <Phone className="w-4 h-4" />
-            <span>{client.telephone}</span>
+            <span>{client.telephone || 'N/A'}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-text-light">
             <Calendar className="w-4 h-4" />
@@ -272,15 +356,9 @@ function ClientCard({
           </div>
         </div>
 
-        <div className="pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs text-text-light">Commandes</p>
-            <p className="text-lg font-semibold text-primary">{commandesCount}</p>
-          </div>
-          <div>
-            <p className="text-xs text-text-light">Total dépensé</p>
-            <p className="text-lg font-semibold text-secondary">{formatPrice(totalSpent)}</p>
-          </div>
+        <div className="pt-4 border-t border-gray-100">
+          <p className="text-xs text-text-light">ID Client</p>
+          <p className="text-sm font-medium text-primary">#{client.idClient || client.id}</p>
         </div>
       </CardContent>
     </Card>
@@ -290,13 +368,9 @@ function ClientCard({
 function SocieteCard({
   societe,
   filiales,
-  commandesCount,
-  totalSpent,
 }: {
   societe: Societe;
   filiales: Societe[];
-  commandesCount: number;
-  totalSpent: number;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -310,19 +384,11 @@ function SocieteCard({
             </div>
             <div>
               <h3 className="font-semibold text-primary text-lg">{societe.nom}</h3>
-              <p className="text-sm text-text-light">N° Fiscal: {societe.numeroFiscal}</p>
+              <p className="text-sm text-text-light">N° Fiscal: {societe.numeroFiscal || 'N/A'}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-6">
-            <div className="text-center">
-              <p className="text-xs text-text-light">Commandes</p>
-              <p className="text-xl font-semibold text-primary">{commandesCount}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-text-light">CA Total</p>
-              <p className="text-xl font-semibold text-secondary">{formatPrice(totalSpent)}</p>
-            </div>
             {filiales.length > 0 && (
               <div className="text-center">
                 <p className="text-xs text-text-light">Filiales</p>
@@ -343,11 +409,11 @@ function SocieteCard({
         <div className="mt-4 flex items-center gap-4 text-sm text-text-light">
           <div className="flex items-center gap-1">
             <Mail className="w-4 h-4" />
-            {societe.email}
+            {societe.email || 'N/A'}
           </div>
           <div className="flex items-center gap-1">
             <Phone className="w-4 h-4" />
-            {societe.telephone}
+            {societe.telephone || 'N/A'}
           </div>
           <div className="flex items-center gap-1">
             <Calendar className="w-4 h-4" />
@@ -370,7 +436,7 @@ function SocieteCard({
               <div className="mt-3 space-y-2 pl-6">
                 {filiales.map((filiale) => (
                   <div
-                    key={filiale.id}
+                    key={filiale.idSociete || filiale.id}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                   >
                     <div className="flex items-center gap-3">
@@ -389,5 +455,228 @@ function SocieteCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// Modal pour ajouter un client
+function AddClientModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (c: Client) => void }) {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    nom: '',
+    prenom: '',
+    email: '',
+    motDePasse: '',
+    sexe: 'M' as 'M' | 'F',
+    dateNaissance: '',
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const newClient = await clientService.create({
+        ...formData,
+        type: 'CLIENT',
+      } as any);
+      onSuccess(newClient);
+    } catch (err) {
+      console.error('Erreur lors de la création', err);
+      alert('Erreur lors de la création du client');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold text-primary">Ajouter un client</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Nom *</label>
+              <input
+                type="text"
+                className="input"
+                value={formData.nom}
+                onChange={e => setFormData(prev => ({ ...prev, nom: e.target.value }))}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Prénom *</label>
+              <input
+                type="text"
+                className="input"
+                value={formData.prenom}
+                onChange={e => setFormData(prev => ({ ...prev, prenom: e.target.value }))}
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Email *</label>
+            <input
+              type="email"
+              className="input"
+              value={formData.email}
+              onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Mot de passe *</label>
+            <input
+              type="password"
+              className="input"
+              value={formData.motDePasse}
+              onChange={e => setFormData(prev => ({ ...prev, motDePasse: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Genre</label>
+              <select
+                className="input"
+                value={formData.sexe}
+                onChange={e => setFormData(prev => ({ ...prev, sexe: e.target.value as 'M' | 'F' }))}
+              >
+                <option value="M">Homme</option>
+                <option value="F">Femme</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Date de naissance</label>
+              <input
+                type="date"
+                className="input"
+                value={formData.dateNaissance}
+                onChange={e => setFormData(prev => ({ ...prev, dateNaissance: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+              Annuler
+            </Button>
+            <Button type="submit" variant="primary" className="flex-1" disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+              Créer
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Modal pour ajouter une société
+function AddSocieteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (s: Societe) => void }) {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    nom: '',
+    email: '',
+    motDePasse: '',
+    numeroFiscal: '',
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const newSociete = await societeService.create({
+        ...formData,
+        type: 'SOCIETE',
+      } as any);
+      onSuccess(newSociete);
+    } catch (err) {
+      console.error('Erreur lors de la création', err);
+      alert('Erreur lors de la création de la société');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold text-primary">Ajouter une société</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Nom de la société *</label>
+            <input
+              type="text"
+              className="input"
+              value={formData.nom}
+              onChange={e => setFormData(prev => ({ ...prev, nom: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Email *</label>
+            <input
+              type="email"
+              className="input"
+              value={formData.email}
+              onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Mot de passe *</label>
+            <input
+              type="password"
+              className="input"
+              value={formData.motDePasse}
+              onChange={e => setFormData(prev => ({ ...prev, motDePasse: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Numéro fiscal *</label>
+            <input
+              type="text"
+              className="input"
+              value={formData.numeroFiscal}
+              onChange={e => setFormData(prev => ({ ...prev, numeroFiscal: e.target.value }))}
+              placeholder="Ex: FR12345678901"
+              required
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+              Annuler
+            </Button>
+            <Button type="submit" variant="primary" className="flex-1" disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+              Créer
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

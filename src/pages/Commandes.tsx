@@ -10,22 +10,67 @@ import {
   CheckCircle,
   Clock,
   Truck,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
-import { Card, CardContent, Badge, Button, Pagination } from '../components/ui';
-import {
-  commandes,
-  getUtilisateurById,
-  getVehiculeById,
-  getOptionById,
-  formatPrice,
-  formatDate,
-  getStatutLabel,
-  getStatutColor,
-  getPaysLabel,
-  type StatutCommande,
-  type Commande,
-} from '../data/mockData';
+import { Card, CardContent, Badge, Button, Pagination, Alert } from '../components/ui';
+import { commandeService } from '../services';
+import type { Commande } from '../services/types';
+
+type StatutCommande = 'EN_COURS' | 'ACTIF' | 'VALIDEE' | 'CONVERTI' | 'LIVREE' | 'ANNULEE';
+
+const formatPrice = (price: number): string => {
+  return new Intl.NumberFormat('fr-FR').format(price || 0) + ' FCFA';
+};
+
+const formatDate = (dateString: string): string => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+};
+
+const getStatutLabel = (statut: string): string => {
+  const labels: Record<string, string> = {
+    EN_COURS: 'En cours',
+    ACTIF: 'Active',
+    VALIDEE: 'Validée',
+    CONVERTI: 'Convertie',
+    LIVREE: 'Livrée',
+    ANNULEE: 'Annulée',
+  };
+  return labels[statut] || statut;
+};
+
+const getStatutColor = (statut: string): string => {
+  const colors: Record<string, string> = {
+    EN_COURS: 'warning',
+    ACTIF: 'warning',
+    VALIDEE: 'info',
+    CONVERTI: 'success',
+    LIVREE: 'success',
+    ANNULEE: 'danger',
+  };
+  return colors[statut] || 'default';
+};
+
+const getPaysLabel = (pays: string): string => {
+  const labels: Record<string, string> = {
+    SENEGAL: 'Sénégal',
+    FRANCE: 'France',
+    BELGIQUE: 'Belgique',
+    SUISSE: 'Suisse',
+    CANADA: 'Canada',
+    COTE_IVOIRE: "Côte d'Ivoire",
+    MAROC: 'Maroc',
+  };
+  return labels[pays] || pays || 'N/A';
+};
 
 export default function Commandes() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,17 +79,53 @@ export default function Commandes() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const filteredCommandes = commandes.filter((c) => {
-    const utilisateur = getUtilisateurById(c.utilisateurId);
-    const clientName = utilisateur
-      ? utilisateur.type === 'CLIENT'
-        ? `${utilisateur.prenom} ${utilisateur.nom}`
-        : utilisateur.nom
-      : '';
+  // API states
+  const [commandes, setCommandes] = useState<Commande[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    const matchSearch =
-      c.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      clientName.toLowerCase().includes(searchTerm.toLowerCase());
+  const fetchCommandes = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await commandeService.getAll();
+      setCommandes(result.commandes);
+    } catch (err: any) {
+      console.error('Erreur lors du chargement des commandes:', err);
+      setError(err.message || 'Impossible de charger les commandes depuis le serveur');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleValiderCommande = async (id: number) => {
+    try {
+      const updated = await commandeService.executer(id);
+      setCommandes(prev => prev.map(c => c.idCommande === id || c.id === id ? updated : c));
+    } catch (err) {
+      console.error('Erreur lors de la validation:', err);
+      alert('Erreur lors de la validation de la commande');
+    }
+  };
+
+  const handleMarquerLivree = async (id: number) => {
+    try {
+      const updated = await commandeService.marquerLivree(id);
+      setCommandes(prev => prev.map(c => c.idCommande === id || c.id === id ? updated : c));
+    } catch (err) {
+      console.error('Erreur lors du marquage:', err);
+      alert('Erreur lors du marquage de la commande comme livrée');
+    }
+  };
+
+  useEffect(() => {
+    fetchCommandes();
+  }, []);
+
+  const filteredCommandes = commandes.filter((c) => {
+    const reference = c.reference || `CMD-${c.idCommande || c.id}`;
+    const matchSearch = reference.toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatut = filterStatut === 'ALL' || c.statut === filterStatut;
     return matchSearch && matchStatut;
   });
@@ -66,11 +147,43 @@ export default function Commandes() {
   };
 
   const stats = {
-    enCours: commandes.filter((c) => c.statut === 'EN_COURS').length,
+    enCours: commandes.filter((c) => c.statut === 'EN_COURS' || c.statut === 'ACTIF').length,
     validees: commandes.filter((c) => c.statut === 'VALIDEE').length,
-    livrees: commandes.filter((c) => c.statut === 'LIVREE').length,
-    total: commandes.reduce((acc, c) => acc + c.montantTTC, 0),
+    livrees: commandes.filter((c) => c.statut === 'LIVREE' || c.statut === 'CONVERTI').length,
+    total: commandes.reduce((acc, c) => acc + (c.total || c.montantTTC || 0), 0),
   };
+
+  if (loading) {
+    return (
+      <div>
+        <Header title="Commandes" subtitle="Gérez les commandes clients" />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-secondary mx-auto mb-4" />
+            <p className="text-text-light">Chargement des commandes...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <Header title="Commandes" subtitle="Gérez les commandes clients" />
+        <div className="p-4 sm:p-6">
+          <Alert variant="error" className="mb-4">
+            <AlertCircle className="w-4 h-4" />
+            <span>{error}</span>
+          </Alert>
+          <Button onClick={fetchCommandes} variant="primary">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -132,7 +245,7 @@ export default function Commandes() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light" />
               <input
                 type="text"
-                placeholder="Rechercher par référence ou client..."
+                placeholder="Rechercher par référence..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="input pl-10"
@@ -144,9 +257,9 @@ export default function Commandes() {
               className="input w-auto"
             >
               <option value="ALL">Tous les statuts</option>
-              <option value="EN_COURS">En cours</option>
+              <option value="ACTIF">Actives</option>
               <option value="VALIDEE">Validées</option>
-              <option value="LIVREE">Livrées</option>
+              <option value="CONVERTI">Converties</option>
             </select>
           </CardContent>
         </Card>
@@ -159,10 +272,8 @@ export default function Commandes() {
                 <thead className="bg-background">
                   <tr>
                     <th className="table-header">Référence</th>
-                    <th className="table-header">Client</th>
                     <th className="table-header">Pays</th>
-                    <th className="table-header">Montant TTC</th>
-                    <th className="table-header">Paiement</th>
+                    <th className="table-header">Montant</th>
                     <th className="table-header">Statut</th>
                     <th className="table-header">Date</th>
                     <th className="table-header">Actions</th>
@@ -171,10 +282,12 @@ export default function Commandes() {
                 <tbody className="divide-y divide-gray-100">
                   {paginatedCommandes.map((commande) => (
                     <OrderRow
-                      key={commande.id}
+                      key={commande.idCommande || commande.id}
                       commande={commande}
-                      isExpanded={expandedOrder === commande.id}
-                      onToggle={() => setExpandedOrder(expandedOrder === commande.id ? null : commande.id)}
+                      isExpanded={expandedOrder === (commande.idCommande || commande.id)}
+                      onToggle={() => setExpandedOrder(expandedOrder === (commande.idCommande || commande.id) ? null : (commande.idCommande || commande.id))}
+                      onValider={() => handleValiderCommande(commande.idCommande || commande.id)}
+                      onMarquerLivree={() => handleMarquerLivree(commande.idCommande || commande.id)}
                     />
                   ))}
                 </tbody>
@@ -211,39 +324,31 @@ function OrderRow({
   commande,
   isExpanded,
   onToggle,
+  onValider,
+  onMarquerLivree,
 }: {
   commande: Commande;
   isExpanded: boolean;
   onToggle: () => void;
+  onValider: () => void;
+  onMarquerLivree: () => void;
 }) {
-  const utilisateur = getUtilisateurById(commande.utilisateurId);
-  const clientName = utilisateur
-    ? utilisateur.type === 'CLIENT'
-      ? `${utilisateur.prenom} ${utilisateur.nom}`
-      : utilisateur.nom
-    : 'Inconnu';
+  const reference = commande.reference || `CMD-${commande.idCommande || commande.id}`;
+  const montant = commande.total || commande.montantTTC || 0;
+  const date = commande.date || commande.dateCommande;
 
   return (
     <>
       <tr className="hover:bg-gray-50">
-        <td className="table-cell font-medium text-primary">{commande.reference}</td>
-        <td className="table-cell">
-          <div>
-            <p className="font-medium text-text">{clientName}</p>
-            <p className="text-xs text-text-light">{utilisateur?.email}</p>
-          </div>
-        </td>
+        <td className="table-cell font-medium text-primary">{reference}</td>
         <td className="table-cell">{getPaysLabel(commande.paysLivraison)}</td>
-        <td className="table-cell font-semibold text-secondary">{formatPrice(commande.montantTTC)}</td>
-        <td className="table-cell">
-          <Badge variant="default">{commande.methodePaiement.replace('_', ' ')}</Badge>
-        </td>
+        <td className="table-cell font-semibold text-secondary">{formatPrice(montant)}</td>
         <td className="table-cell">
           <Badge variant={getStatutColor(commande.statut) as any}>
             {getStatutLabel(commande.statut)}
           </Badge>
         </td>
-        <td className="table-cell text-text-light">{formatDate(commande.dateCommande)}</td>
+        <td className="table-cell text-text-light">{formatDate(date)}</td>
         <td className="table-cell">
           <div className="flex items-center gap-2">
             <button
@@ -266,102 +371,52 @@ function OrderRow({
       {/* Expanded details */}
       {isExpanded && (
         <tr>
-          <td colSpan={8} className="bg-gray-50 px-6 py-4">
+          <td colSpan={6} className="bg-gray-50 px-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Order lines */}
+              {/* Order info */}
               <div>
-                <h4 className="font-semibold text-primary mb-3">Articles commandés</h4>
-                <div className="space-y-3">
-                  {commande.lignes.map((ligne) => {
-                    const vehicule = getVehiculeById(ligne.vehiculeId);
-                    return (
-                      <div key={ligne.id} className="bg-white rounded-lg p-3 border border-gray-100">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-text">{vehicule?.nom}</p>
-                            <p className="text-sm text-text-light">
-                              {ligne.quantite}x {formatPrice(ligne.prixUnitaireHT)} HT
-                            </p>
-                          </div>
-                          <p className="font-semibold text-secondary">
-                            {formatPrice(ligne.prixUnitaireHT * ligne.quantite)}
-                          </p>
-                        </div>
-                        {ligne.optionsSelectionnees.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {ligne.optionsSelectionnees.map((optId) => {
-                              const opt = getOptionById(optId);
-                              return opt ? (
-                                <span key={optId} className="text-xs bg-gray-100 text-text-light px-2 py-0.5 rounded">
-                                  + {opt.nom}
-                                </span>
-                              ) : null;
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-text-light">Sous-total HT</span>
-                    <span>{formatPrice(commande.montantHT)}</span>
+                <h4 className="font-semibold text-primary mb-3">Détails de la commande</h4>
+                <div className="bg-white rounded-lg p-4 border border-gray-100 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-text-light">ID Commande</span>
+                    <span className="font-medium">#{commande.idCommande || commande.id}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-text-light">Taxes</span>
-                    <span>{formatPrice(commande.taxes)}</span>
+                  <div className="flex justify-between">
+                    <span className="text-text-light">Pays de livraison</span>
+                    <span className="font-medium">{getPaysLabel(commande.paysLivraison)}</span>
                   </div>
-                  <div className="flex justify-between font-semibold text-primary mt-2">
-                    <span>Total TTC</span>
-                    <span className="text-secondary">{formatPrice(commande.montantTTC)}</span>
+                  <div className="flex justify-between">
+                    <span className="text-text-light">Type</span>
+                    <span className="font-medium">{commande.type || 'Standard'}</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t">
+                    <span className="font-semibold">Total</span>
+                    <span className="font-bold text-secondary">{formatPrice(montant)}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Documents */}
+              {/* Actions */}
               <div>
-                <h4 className="font-semibold text-primary mb-3">Documents</h4>
+                <h4 className="font-semibold text-primary mb-3">Actions</h4>
                 <div className="space-y-2">
-                  {commande.documents.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="bg-white rounded-lg p-3 border border-gray-100 flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-secondary/10 rounded-lg">
-                          <FileText className="w-4 h-4 text-secondary" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-text">
-                            {doc.type.replace(/_/g, ' ')}
-                          </p>
-                          <p className="text-xs text-text-light">
-                            {doc.format} - {formatDate(doc.dateCreation)}
-                          </p>
-                        </div>
-                      </div>
-                      <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-                        <Download className="w-4 h-4 text-text-light" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Actions */}
-                <div className="mt-4 flex gap-2">
-                  {commande.statut === 'EN_COURS' && (
-                    <Button variant="primary" size="sm">
+                  {(commande.statut === 'ACTIF' || commande.statut === 'EN_COURS') && (
+                    <Button variant="primary" size="sm" className="w-full justify-center" onClick={onValider}>
                       Valider la commande
                     </Button>
                   )}
                   {commande.statut === 'VALIDEE' && (
-                    <Button variant="primary" size="sm">
+                    <Button variant="primary" size="sm" className="w-full justify-center" onClick={onMarquerLivree}>
                       Marquer comme livrée
                     </Button>
                   )}
-                  <Button variant="outline" size="sm">
-                    Voir détails
+                  <Button variant="outline" size="sm" className="w-full justify-center">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Générer facture
+                  </Button>
+                  <Button variant="outline" size="sm" className="w-full justify-center">
+                    <Download className="w-4 h-4 mr-2" />
+                    Télécharger récapitulatif
                   </Button>
                 </div>
               </div>

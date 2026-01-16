@@ -9,10 +9,22 @@ import {
   Car,
   Zap,
   Fuel,
+  Loader2,
+  AlertCircle,
+  X,
+  RefreshCw,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
-import { Card, CardContent, Badge, Button, Pagination } from '../components/ui';
-import { vehicules, options, formatPrice, type Vehicule, type TypeMoteur, type TypeVehicule } from '../data/mockData';
+import { Card, CardContent, Badge, Button, Pagination, Alert } from '../components/ui';
+import { vehiculeService } from '../services';
+import type { Vehicule } from '../services/types';
+
+type TypeMoteur = 'ESSENCE' | 'ELECTRIQUE';
+type TypeVehicule = 'AUTOMOBILE' | 'SCOOTER';
+
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('fr-FR').format(price) + ' FCFA';
+};
 
 export default function Vehicules() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,13 +33,43 @@ export default function Vehicules() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
 
+  // États API
+  const [vehicules, setVehicules] = useState<Vehicule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Modal ajout véhicule
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  // Charger les véhicules depuis l'API
+  const fetchVehicules = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await vehiculeService.getAllCustom();
+      setVehicules(data);
+    } catch (err: any) {
+      console.error('Erreur API:', err);
+      setError(err.message || 'Impossible de charger les véhicules depuis le serveur');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVehicules();
+  }, []);
+
+  // Filtrage (avec gestion des valeurs null/undefined)
   const filteredVehicules = vehicules.filter((v) => {
+    const searchLower = searchTerm.toLowerCase();
     const matchSearch =
-      v.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.marque.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.modele.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchMoteur = filterMoteur === 'ALL' || v.typeMoteur === filterMoteur;
-    const matchType = filterType === 'ALL' || v.typeVehicule === filterType;
+      (v.nom || '').toLowerCase().includes(searchLower) ||
+      (v.marque || '').toLowerCase().includes(searchLower) ||
+      (v.model || '').toLowerCase().includes(searchLower);
+    const matchMoteur = filterMoteur === 'ALL' || v.engine === filterMoteur;
+    const matchType = filterType === 'ALL' || v.type === filterType;
     return matchSearch && matchMoteur && matchType;
   });
 
@@ -46,6 +88,50 @@ export default function Vehicules() {
     setItemsPerPage(newItemsPerPage);
     setCurrentPage(1);
   };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce véhicule ?')) return;
+
+    try {
+      await vehiculeService.delete(id);
+      setVehicules(prev => prev.filter(v => v.idVehicule !== id));
+    } catch (err) {
+      console.error('Erreur lors de la suppression', err);
+      alert('Erreur lors de la suppression du véhicule');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div>
+        <Header title="Véhicules" subtitle="Gérez votre catalogue de véhicules" />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-secondary mx-auto mb-4" />
+            <p className="text-text-light">Chargement des véhicules depuis le serveur...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <Header title="Véhicules" subtitle="Gérez votre catalogue de véhicules" />
+        <div className="p-4 sm:p-6">
+          <Alert variant="error" className="mb-4">
+            <AlertCircle className="w-4 h-4" />
+            <span>{error}</span>
+          </Alert>
+          <Button onClick={fetchVehicules} variant="primary">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -88,7 +174,7 @@ export default function Vehicules() {
               <option value="SCOOTER">Scooter</option>
             </select>
 
-            <Button variant="primary" className="w-full xs:w-auto">
+            <Button variant="primary" className="w-full xs:w-auto" onClick={() => setShowAddModal(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Ajouter
             </Button>
@@ -104,19 +190,19 @@ export default function Vehicules() {
           <div className="bg-background-card rounded-lg p-3 sm:p-4 border border-gray-100">
             <p className="text-xs sm:text-sm text-text-light">Automobiles</p>
             <p className="text-xl sm:text-2xl font-bold text-primary">
-              {vehicules.filter((v) => v.typeVehicule === 'AUTOMOBILE').length}
+              {vehicules.filter((v) => v.type === 'AUTOMOBILE').length}
             </p>
           </div>
           <div className="bg-background-card rounded-lg p-3 sm:p-4 border border-gray-100">
             <p className="text-xs sm:text-sm text-text-light">Scooters</p>
             <p className="text-xl sm:text-2xl font-bold text-primary">
-              {vehicules.filter((v) => v.typeVehicule === 'SCOOTER').length}
+              {vehicules.filter((v) => v.type === 'SCOOTER').length}
             </p>
           </div>
           <div className="bg-background-card rounded-lg p-3 sm:p-4 border border-gray-100">
             <p className="text-xs sm:text-sm text-text-light">Électriques</p>
             <p className="text-xl sm:text-2xl font-bold text-primary">
-              {vehicules.filter((v) => v.typeMoteur === 'ELECTRIQUE').length}
+              {vehicules.filter((v) => v.engine === 'ELECTRIQUE').length}
             </p>
           </div>
         </div>
@@ -124,7 +210,7 @@ export default function Vehicules() {
         {/* Vehicles grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {paginatedVehicules.map((vehicule) => (
-            <VehiculeCard key={vehicule.id} vehicule={vehicule} />
+            <VehiculeCard key={vehicule.idVehicule} vehicule={vehicule} onDelete={handleDelete} />
           ))}
         </div>
 
@@ -150,25 +236,39 @@ export default function Vehicules() {
           </div>
         )}
       </div>
+
+      {/* Modal Ajout Véhicule */}
+      {showAddModal && (
+        <AddVehiculeModal
+          onClose={() => setShowAddModal(false)}
+          onSuccess={(newVehicule) => {
+            setVehicules(prev => [...prev, newVehicule]);
+            setShowAddModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function VehiculeCard({ vehicule }: { vehicule: Vehicule }) {
+function VehiculeCard({ vehicule, onDelete }: { vehicule: Vehicule; onDelete: (id: number) => void }) {
   const [showMenu, setShowMenu] = useState(false);
+
+  const imageUrl = vehicule.images?.[0]?.url || 'https://via.placeholder.com/400x300?text=No+Image';
+  const stockQuantite = vehicule.stock?.quantite || 0;
 
   return (
     <Card hover className="overflow-hidden p-0">
       {/* Image */}
       <div className="relative h-48 bg-gray-100">
         <img
-          src={vehicule.image}
+          src={imageUrl}
           alt={vehicule.nom}
           className="w-full h-full object-cover"
         />
         <div className="absolute top-3 left-3 flex gap-2">
-          <Badge variant={vehicule.typeMoteur === 'ELECTRIQUE' ? 'success' : 'default'}>
-            {vehicule.typeMoteur === 'ELECTRIQUE' ? (
+          <Badge variant={vehicule.engine === 'ELECTRIQUE' ? 'success' : 'default'}>
+            {vehicule.engine === 'ELECTRIQUE' ? (
               <><Zap className="w-3 h-3 mr-1" /> Électrique</>
             ) : (
               <><Fuel className="w-3 h-3 mr-1" /> Essence</>
@@ -191,7 +291,10 @@ function VehiculeCard({ vehicule }: { vehicule: Vehicule }) {
                 <button className="w-full px-4 py-2 text-left text-sm text-text hover:bg-gray-50 flex items-center gap-2">
                   <Edit className="w-4 h-4" /> Modifier
                 </button>
-                <button className="w-full px-4 py-2 text-left text-sm text-error hover:bg-red-50 flex items-center gap-2">
+                <button
+                  onClick={() => onDelete(vehicule.idVehicule)}
+                  className="w-full px-4 py-2 text-left text-sm text-error hover:bg-red-50 flex items-center gap-2"
+                >
                   <Trash2 className="w-4 h-4" /> Supprimer
                 </button>
               </div>
@@ -205,7 +308,7 @@ function VehiculeCard({ vehicule }: { vehicule: Vehicule }) {
         <div className="flex items-start justify-between mb-2">
           <div>
             <h3 className="font-semibold text-primary">{vehicule.nom}</h3>
-            <p className="text-sm text-text-light">{vehicule.marque} - {vehicule.modele}</p>
+            <p className="text-sm text-text-light">{vehicule.marque} - {vehicule.model}</p>
           </div>
         </div>
 
@@ -213,31 +316,600 @@ function VehiculeCard({ vehicule }: { vehicule: Vehicule }) {
           <p className="text-xl font-bold text-secondary">{formatPrice(vehicule.prixBase)}</p>
           <div className="text-right">
             <p className="text-xs text-text-light">En stock</p>
-            <p className={`text-sm font-semibold ${vehicule.stock.quantite <= 3 ? 'text-error' : 'text-success'}`}>
-              {vehicule.stock.quantite} unités
+            <p className={`text-sm font-semibold ${stockQuantite <= 3 ? 'text-error' : 'text-success'}`}>
+              {stockQuantite} unités
             </p>
           </div>
         </div>
 
         <div className="mt-4 pt-4 border-t border-gray-100">
-          <p className="text-xs text-text-light mb-2">{vehicule.options.length} options disponibles</p>
+          <p className="text-xs text-text-light mb-2">{vehicule.options?.length || 0} options disponibles</p>
           <div className="flex flex-wrap gap-1">
-            {vehicule.options.slice(0, 3).map((optId) => {
-              const opt = options.find((o) => o.id === optId);
-              return opt ? (
-                <span key={optId} className="text-xs bg-gray-100 text-text-light px-2 py-0.5 rounded">
-                  {opt.nom}
-                </span>
-              ) : null;
-            })}
-            {vehicule.options.length > 3 && (
+            {vehicule.options?.slice(0, 3).map((opt) => (
+              <span key={opt.idOption} className="text-xs bg-gray-100 text-text-light px-2 py-0.5 rounded">
+                {opt.nom}
+              </span>
+            ))}
+            {(vehicule.options?.length || 0) > 3 && (
               <span className="text-xs bg-gray-100 text-text-light px-2 py-0.5 rounded">
-                +{vehicule.options.length - 3}
+                +{vehicule.options!.length - 3}
               </span>
             )}
           </div>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (v: Vehicule) => void }) {
+  const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [activeTab, setActiveTab] = useState<'info' | 'specs' | 'images' | 'options'>('info');
+
+  // Images à uploader (fichiers)
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+
+  // Nouvelle couleur en cours de saisie
+  const [newColor, setNewColor] = useState('');
+
+  const [formData, setFormData] = useState({
+    // Informations de base
+    nom: '',
+    model: '',
+    marque: '',
+    annee: new Date().getFullYear(),
+    energie: 'ESSENCE' as 'ESSENCE' | 'ELECTRIQUE',
+    type: 'AUTOMOBILE' as 'AUTOMOBILE' | 'SCOOTER',
+    prixBase: 0,
+    description: '',
+
+    // Caractéristiques techniques
+    puissance: '',
+    transmission: '',
+    carburant: '',
+    consommation: '',
+    acceleration: '',
+    vitesseMax: '',
+
+    // Couleurs disponibles
+    couleurs: [] as string[],
+
+    // Stock
+    quantiteStock: 0,
+
+    // Statuts
+    nouveau: true,
+    solde: false,
+    facteurReduction: 0,
+
+    // Images (URLs)
+    imageUrls: [] as string[],
+  });
+
+  // Gérer l'ajout de fichiers images
+  const handleImageFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setImageFiles(prev => [...prev, ...files]);
+
+      // Créer les previews
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreviews(prev => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  // Supprimer une image
+  const removeImage = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Ajouter une couleur
+  const addColor = () => {
+    if (newColor.trim() && !formData.couleurs.includes(newColor.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        couleurs: [...prev.couleurs, newColor.trim()]
+      }));
+      setNewColor('');
+    }
+  };
+
+  // Supprimer une couleur
+  const removeColor = (color: string) => {
+    setFormData(prev => ({
+      ...prev,
+      couleurs: prev.couleurs.filter(c => c !== color)
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setUploadProgress(0);
+
+    try {
+      // 1. Créer le véhicule avec les données de base
+      const createData = {
+        energie: formData.energie,
+        type: formData.type,
+        nom: formData.nom,
+        model: formData.model,
+        marque: formData.marque,
+        annee: formData.annee,
+        prixBase: formData.prixBase,
+        description: formData.description,
+        puissance: formData.puissance,
+        transmission: formData.transmission,
+        carburant: formData.carburant,
+        consommation: formData.consommation,
+        acceleration: formData.acceleration,
+        vitesseMax: formData.vitesseMax,
+        couleurs: formData.couleurs,
+        quantiteStock: formData.quantiteStock,
+        nouveau: formData.nouveau,
+        solde: formData.solde,
+        facteurReduction: formData.solde ? formData.facteurReduction : 0,
+        imageUrls: formData.imageUrls,
+      };
+
+      const newVehicule = await vehiculeService.create(createData);
+      setUploadProgress(30);
+
+      // 2. Uploader les images fichiers si présentes
+      if (imageFiles.length > 0) {
+        const totalFiles = imageFiles.length;
+        for (let i = 0; i < imageFiles.length; i++) {
+          await vehiculeService.uploadImage(
+            newVehicule.idVehicule,
+            imageFiles[i],
+            i === 0 // Première image = principale
+          );
+          setUploadProgress(30 + ((i + 1) / totalFiles) * 70);
+        }
+
+        // Récupérer le véhicule mis à jour avec les images
+        const updatedVehicule = await vehiculeService.getById(newVehicule.idVehicule);
+        onSuccess(updatedVehicule);
+      } else {
+        onSuccess(newVehicule);
+      }
+    } catch (err) {
+      console.error('Erreur lors de la création', err);
+      alert('Erreur lors de la création du véhicule');
+    } finally {
+      setLoading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const tabs = [
+    { id: 'info' as const, label: 'Informations' },
+    { id: 'specs' as const, label: 'Caractéristiques' },
+    { id: 'images' as const, label: 'Images' },
+    { id: 'options' as const, label: 'Options' },
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
+          <h2 className="text-lg font-semibold text-primary">Ajouter un véhicule</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b shrink-0">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                activeTab === tab.id
+                  ? 'text-secondary border-b-2 border-secondary bg-secondary/5'
+                  : 'text-text-light hover:text-text hover:bg-gray-50'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+          <div className="p-4 space-y-4">
+            {/* Tab: Informations de base */}
+            {activeTab === 'info' && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Nom *</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={formData.nom}
+                      onChange={e => setFormData(prev => ({ ...prev, nom: e.target.value }))}
+                      placeholder="Ex: Tesla Model 3"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Modèle *</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={formData.model}
+                      onChange={e => setFormData(prev => ({ ...prev, model: e.target.value }))}
+                      placeholder="Ex: Model 3"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Marque *</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={formData.marque}
+                      onChange={e => setFormData(prev => ({ ...prev, marque: e.target.value }))}
+                      placeholder="Ex: Tesla"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Année *</label>
+                    <input
+                      type="number"
+                      className="input"
+                      value={formData.annee}
+                      onChange={e => setFormData(prev => ({ ...prev, annee: parseInt(e.target.value) || new Date().getFullYear() }))}
+                      min={2000}
+                      max={2030}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Type de véhicule</label>
+                    <select
+                      className="input"
+                      value={formData.type}
+                      onChange={e => setFormData(prev => ({ ...prev, type: e.target.value as 'AUTOMOBILE' | 'SCOOTER' }))}
+                    >
+                      <option value="AUTOMOBILE">Automobile</option>
+                      <option value="SCOOTER">Scooter</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Motorisation</label>
+                    <select
+                      className="input"
+                      value={formData.energie}
+                      onChange={e => setFormData(prev => ({ ...prev, energie: e.target.value as 'ESSENCE' | 'ELECTRIQUE' }))}
+                    >
+                      <option value="ESSENCE">Essence</option>
+                      <option value="ELECTRIQUE">Électrique</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Prix de base (FCFA) *</label>
+                    <input
+                      type="number"
+                      className="input"
+                      value={formData.prixBase}
+                      onChange={e => setFormData(prev => ({ ...prev, prixBase: parseInt(e.target.value) || 0 }))}
+                      min={0}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Stock initial</label>
+                    <input
+                      type="number"
+                      className="input"
+                      value={formData.quantiteStock}
+                      onChange={e => setFormData(prev => ({ ...prev, quantiteStock: parseInt(e.target.value) || 0 }))}
+                      min={0}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <textarea
+                    className="input min-h-[100px]"
+                    value={formData.description}
+                    onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Description détaillée du véhicule..."
+                  />
+                </div>
+
+                {/* Statuts */}
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.nouveau}
+                      onChange={e => setFormData(prev => ({ ...prev, nouveau: e.target.checked }))}
+                      className="w-4 h-4 rounded border-gray-300 text-secondary focus:ring-secondary"
+                    />
+                    <span className="text-sm">Marquer comme nouveau</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.solde}
+                      onChange={e => setFormData(prev => ({ ...prev, solde: e.target.checked }))}
+                      className="w-4 h-4 rounded border-gray-300 text-secondary focus:ring-secondary"
+                    />
+                    <span className="text-sm">En promotion</span>
+                  </label>
+                </div>
+
+                {formData.solde && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Réduction (%)</label>
+                    <input
+                      type="number"
+                      className="input"
+                      value={formData.facteurReduction}
+                      onChange={e => setFormData(prev => ({ ...prev, facteurReduction: parseFloat(e.target.value) || 0 }))}
+                      min={0}
+                      max={100}
+                      step={0.01}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Tab: Caractéristiques techniques */}
+            {activeTab === 'specs' && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Puissance</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={formData.puissance}
+                      onChange={e => setFormData(prev => ({ ...prev, puissance: e.target.value }))}
+                      placeholder="Ex: 340 ch"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Transmission</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={formData.transmission}
+                      onChange={e => setFormData(prev => ({ ...prev, transmission: e.target.value }))}
+                      placeholder="Ex: Automatique 8 vitesses"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Carburant</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={formData.carburant}
+                      onChange={e => setFormData(prev => ({ ...prev, carburant: e.target.value }))}
+                      placeholder="Ex: Essence, Diesel, Électrique"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Consommation</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={formData.consommation}
+                      onChange={e => setFormData(prev => ({ ...prev, consommation: e.target.value }))}
+                      placeholder="Ex: 9.5 L/100km"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Accélération (0-100 km/h)</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={formData.acceleration}
+                      onChange={e => setFormData(prev => ({ ...prev, acceleration: e.target.value }))}
+                      placeholder="Ex: 5.5s"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Vitesse max</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={formData.vitesseMax}
+                      onChange={e => setFormData(prev => ({ ...prev, vitesseMax: e.target.value }))}
+                      placeholder="Ex: 243 km/h"
+                    />
+                  </div>
+                </div>
+
+                {/* Couleurs disponibles */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Couleurs disponibles</label>
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      className="input flex-1"
+                      value={newColor}
+                      onChange={e => setNewColor(e.target.value)}
+                      onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), addColor())}
+                      placeholder="Ajouter une couleur..."
+                    />
+                    <Button type="button" variant="outline" onClick={addColor}>
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.couleurs.map((color, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-sm"
+                      >
+                        {color}
+                        <button
+                          type="button"
+                          onClick={() => removeColor(color)}
+                          className="p-0.5 hover:bg-gray-200 rounded-full"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                    {formData.couleurs.length === 0 && (
+                      <span className="text-sm text-text-light">Aucune couleur ajoutée</span>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Tab: Images */}
+            {activeTab === 'images' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Ajouter des images</label>
+                  <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center">
+                    <input
+                      type="file"
+                      id="imageUpload"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageFilesChange}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="imageUpload"
+                      className="cursor-pointer flex flex-col items-center gap-2"
+                    >
+                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Plus className="w-6 h-6 text-text-light" />
+                      </div>
+                      <span className="text-sm text-text-light">
+                        Cliquez ou glissez vos images ici
+                      </span>
+                      <span className="text-xs text-text-light">
+                        PNG, JPG jusqu'à 10 MB
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Prévisualisation des images */}
+                {imagePreviews.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Images sélectionnées ({imagePreviews.length})
+                    </label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {imagePreviews.map((preview, idx) => (
+                        <div key={idx} className="relative group">
+                          <img
+                            src={preview}
+                            alt={`Preview ${idx + 1}`}
+                            className="w-full h-24 object-cover rounded-lg"
+                          />
+                          {idx === 0 && (
+                            <span className="absolute top-1 left-1 text-xs bg-secondary text-white px-2 py-0.5 rounded">
+                              Principale
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeImage(idx)}
+                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-sm text-text-light bg-gray-50 rounded-lg p-3">
+                  <strong>Note:</strong> La première image sera définie comme image principale du véhicule.
+                  Vous pouvez modifier l'ordre après la création.
+                </div>
+              </>
+            )}
+
+            {/* Tab: Options (info) */}
+            {activeTab === 'options' && (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Car className="w-8 h-8 text-text-light" />
+                </div>
+                <h3 className="font-medium text-primary mb-2">Options du véhicule</h3>
+                <p className="text-sm text-text-light">
+                  Les options pourront être associées au véhicule après sa création.
+                  Rendez-vous sur la page de détail du véhicule pour gérer ses options.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Footer with progress */}
+          <div className="border-t p-4 bg-gray-50 shrink-0">
+            {loading && uploadProgress > 0 && (
+              <div className="mb-4">
+                <div className="flex justify-between text-sm mb-1">
+                  <span>Création en cours...</span>
+                  <span>{Math.round(uploadProgress)}%</span>
+                </div>
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-secondary transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
+                Annuler
+              </Button>
+              <Button type="submit" variant="primary" className="flex-1" disabled={loading}>
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Plus className="w-4 h-4 mr-2" />
+                )}
+                Créer le véhicule
+              </Button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

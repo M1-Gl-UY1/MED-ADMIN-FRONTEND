@@ -8,12 +8,30 @@ import {
   Plus,
   Minus,
   Calendar,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
-import { Card, CardContent, Badge, Button, Pagination } from '../components/ui';
-import { vehicules, formatPrice, formatDate, type Vehicule } from '../data/mockData';
+import { Card, CardContent, Badge, Button, Pagination, Alert } from '../components/ui';
+import { vehiculeService, stockService } from '../services';
+import type { Vehicule } from '../services/types';
 
 type StockFilter = 'all' | 'low' | 'ok' | 'high';
+
+const formatPrice = (price: number): string => {
+  return new Intl.NumberFormat('fr-FR').format(price || 0) + ' FCFA';
+};
+
+const formatDate = (dateString: string): string => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+};
 
 export default function Stock() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,6 +39,30 @@ export default function Stock() {
   const [editingStock, setEditingStock] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // API states
+  const [vehicules, setVehicules] = useState<Vehicule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchVehicules = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await vehiculeService.getAllCustom();
+      setVehicules(data);
+    } catch (err: any) {
+      console.error('Erreur lors du chargement:', err);
+      setError(err.message || 'Impossible de charger les données depuis le serveur');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVehicules();
+  }, []);
 
   const getStockStatus = (qty: number) => {
     if (qty <= 3) return 'low';
@@ -30,11 +72,12 @@ export default function Stock() {
 
   const filteredVehicules = vehicules.filter((v) => {
     const matchSearch =
-      v.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.marque.toLowerCase().includes(searchTerm.toLowerCase());
+      (v.nom || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (v.marque || '').toLowerCase().includes(searchTerm.toLowerCase());
 
+    const stockQty = v.stock?.quantite || 0;
     if (filter === 'all') return matchSearch;
-    return matchSearch && getStockStatus(v.stock.quantite) === filter;
+    return matchSearch && getStockStatus(stockQty) === filter;
   });
 
   // Reset page when filters change
@@ -54,10 +97,42 @@ export default function Stock() {
   };
 
   const stats = {
-    total: vehicules.reduce((acc, v) => acc + v.stock.quantite, 0),
-    lowStock: vehicules.filter((v) => v.stock.quantite <= 3).length,
-    valueTotal: vehicules.reduce((acc, v) => acc + v.prixBase * v.stock.quantite, 0),
+    total: vehicules.reduce((acc, v) => acc + (v.stock?.quantite || 0), 0),
+    lowStock: vehicules.filter((v) => (v.stock?.quantite || 0) <= 3).length,
+    valueTotal: vehicules.reduce((acc, v) => acc + (v.prixBase || 0) * (v.stock?.quantite || 0), 0),
   };
+
+  if (loading) {
+    return (
+      <div>
+        <Header title="Gestion du Stock" subtitle="Suivez et gérez votre inventaire" />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-secondary mx-auto mb-4" />
+            <p className="text-text-light">Chargement du stock...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <Header title="Gestion du Stock" subtitle="Suivez et gérez votre inventaire" />
+        <div className="p-4 sm:p-6">
+          <Alert variant="error" className="mb-4">
+            <AlertCircle className="w-4 h-4" />
+            <span>{error}</span>
+          </Alert>
+          <Button onClick={fetchVehicules} variant="primary">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -120,7 +195,7 @@ export default function Stock() {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-primary text-sm sm:text-base">Alerte stock faible</p>
                 <p className="text-xs sm:text-sm text-text-light">
-                  {stats.lowStock} véhicule(s) ont un stock ≤ 3 unités
+                  {stats.lowStock} véhicule(s) ont un stock &le; 3 unités
                 </p>
               </div>
               <Button variant="outline" size="sm" onClick={() => setFilter('low')} className="w-full sm:w-auto">
@@ -182,10 +257,16 @@ export default function Stock() {
                 <tbody className="divide-y divide-gray-100">
                   {paginatedVehicules.map((vehicule) => (
                     <StockRow
-                      key={vehicule.id}
+                      key={vehicule.idVehicule}
                       vehicule={vehicule}
-                      isEditing={editingStock === vehicule.id}
-                      onEdit={() => setEditingStock(editingStock === vehicule.id ? null : vehicule.id)}
+                      isEditing={editingStock === vehicule.idVehicule}
+                      onEdit={() => setEditingStock(editingStock === vehicule.idVehicule ? null : vehicule.idVehicule)}
+                      onSave={(updatedVehicule) => {
+                        setVehicules(prev => prev.map(v =>
+                          v.idVehicule === updatedVehicule.idVehicule ? updatedVehicule : v
+                        ));
+                        setEditingStock(null);
+                      }}
                     />
                   ))}
                 </tbody>
@@ -222,12 +303,44 @@ function StockRow({
   vehicule,
   isEditing,
   onEdit,
+  onSave,
 }: {
   vehicule: Vehicule;
   isEditing: boolean;
   onEdit: () => void;
+  onSave: (v: Vehicule) => void;
 }) {
-  const [quantity, setQuantity] = useState(vehicule.stock.quantite);
+  const stockQty = vehicule.stock?.quantite || 0;
+  const [quantity, setQuantity] = useState(stockQty);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!vehicule.stock?.idStock) {
+      alert('Ce véhicule n\'a pas de stock associé');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await stockService.updateQuantite(vehicule.stock.idStock, quantity);
+      // Mettre à jour le véhicule localement
+      const updatedVehicule = {
+        ...vehicule,
+        stock: { ...vehicule.stock, quantite: quantity }
+      };
+      onSave(updatedVehicule);
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour du stock:', err);
+      alert('Erreur lors de la mise à jour du stock');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setQuantity(stockQty);
+    onEdit();
+  };
 
   const getStockBadge = (qty: number) => {
     if (qty <= 3) return <Badge variant="error">Stock faible</Badge>;
@@ -235,30 +348,31 @@ function StockRow({
     return <Badge variant="success">Stock élevé</Badge>;
   };
 
-  const stockValue = vehicule.prixBase * vehicule.stock.quantite;
+  const stockValue = (vehicule.prixBase || 0) * stockQty;
+  const imageUrl = vehicule.images?.[0]?.url || vehicule.imageUrl || 'https://via.placeholder.com/48x48?text=No+Image';
 
   return (
     <tr className="hover:bg-gray-50">
       <td className="table-cell">
         <div className="flex items-center gap-3">
           <img
-            src={vehicule.image}
-            alt={vehicule.nom}
+            src={imageUrl}
+            alt={vehicule.nom || 'Véhicule'}
             className="w-12 h-12 rounded-lg object-cover"
           />
           <div>
-            <p className="font-medium text-primary">{vehicule.nom}</p>
-            <p className="text-xs text-text-light">{vehicule.marque} - {vehicule.modele}</p>
+            <p className="font-medium text-primary">{vehicule.nom || 'Sans nom'}</p>
+            <p className="text-xs text-text-light">{vehicule.marque} - {vehicule.model}</p>
           </div>
         </div>
       </td>
       <td className="table-cell">
         <div className="flex flex-col gap-1">
-          <Badge variant={vehicule.typeVehicule === 'AUTOMOBILE' ? 'info' : 'default'}>
-            {vehicule.typeVehicule}
+          <Badge variant={vehicule.type === 'AUTOMOBILE' ? 'info' : 'default'}>
+            {vehicule.type || 'N/A'}
           </Badge>
-          <Badge variant={vehicule.typeMoteur === 'ELECTRIQUE' ? 'success' : 'default'}>
-            {vehicule.typeMoteur}
+          <Badge variant={vehicule.engine === 'ELECTRIQUE' ? 'success' : 'default'}>
+            {vehicule.engine || 'N/A'}
           </Badge>
         </div>
       </td>
@@ -286,22 +400,22 @@ function StockRow({
             </button>
           </div>
         ) : (
-          <span className={`text-lg font-bold ${vehicule.stock.quantite <= 3 ? 'text-error' : 'text-primary'}`}>
-            {vehicule.stock.quantite}
+          <span className={`text-lg font-bold ${stockQty <= 3 ? 'text-error' : 'text-primary'}`}>
+            {stockQty}
           </span>
         )}
       </td>
       <td className="table-cell font-semibold text-secondary">{formatPrice(stockValue)}</td>
-      <td className="table-cell text-text-light">{formatDate(vehicule.stock.dateEntree)}</td>
-      <td className="table-cell">{getStockBadge(vehicule.stock.quantite)}</td>
+      <td className="table-cell text-text-light">{formatDate(vehicule.stock?.dateEntre)}</td>
+      <td className="table-cell">{getStockBadge(stockQty)}</td>
       <td className="table-cell">
         <div className="flex items-center gap-2">
           {isEditing ? (
             <>
-              <Button variant="primary" size="sm" onClick={onEdit}>
-                Sauver
+              <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sauver'}
               </Button>
-              <Button variant="ghost" size="sm" onClick={onEdit}>
+              <Button variant="ghost" size="sm" onClick={handleCancel} disabled={saving}>
                 Annuler
               </Button>
             </>

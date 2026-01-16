@@ -1,52 +1,159 @@
+import { useState, useEffect } from 'react';
 import {
   DollarSign,
   ShoppingCart,
   Users,
   Package,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
-import { Card, CardHeader, CardTitle, CardContent, StatCard, Badge } from '../components/ui';
-import {
-  dashboardStats,
-  commandes,
-  getUtilisateurById,
-  formatPrice,
-  formatDate,
-  getStatutLabel,
-  getStatutColor,
-} from '../data/mockData';
+import { Card, CardHeader, CardTitle, CardContent, StatCard, Badge, Alert, Button } from '../components/ui';
+import { dashboardService, commandeService } from '../services';
+import type { DashboardStats, VentesParPays, Commande } from '../services/types';
+
+// Fonctions utilitaires locales (sans dépendance aux mock data)
+const formatPrice = (price: number): string => {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(price);
+};
+
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+};
+
+const getStatutLabel = (statut: string): string => {
+  const labels: Record<string, string> = {
+    EN_COURS: 'En cours',
+    VALIDEE: 'Validée',
+    LIVREE: 'Livrée',
+    ANNULEE: 'Annulée',
+  };
+  return labels[statut] || statut;
+};
+
+const getStatutColor = (statut: string): string => {
+  const colors: Record<string, string> = {
+    EN_COURS: 'warning',
+    VALIDEE: 'info',
+    LIVREE: 'success',
+    ANNULEE: 'danger',
+  };
+  return colors[statut] || 'default';
+};
 
 export default function Dashboard() {
-  const recentCommandes = commandes.slice(0, 5);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [ventesParMois, setVentesParMois] = useState<{ mois: string; montant: number }[]>([]);
+  const [ventesParPays, setVentesParPays] = useState<VentesParPays[]>([]);
+  const [recentCommandes, setRecentCommandes] = useState<Commande[]>([]);
+  const [stockFaible, setStockFaible] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Charger les données depuis l'API
+      const [statsData, ventesParMoisData, ventesParPaysData, alertesData, commandesData] = await Promise.all([
+        dashboardService.getStats(),
+        dashboardService.getVentesParMois(),
+        dashboardService.getVentesParPays(),
+        dashboardService.getAlertesStock(3),
+        commandeService.getRecentes(5),
+      ]);
+
+      setStats(statsData);
+      setVentesParMois(ventesParMoisData.map(v => ({ mois: v.mois, montant: v.montant })));
+      setVentesParPays(ventesParPaysData);
+      setStockFaible(alertesData.length);
+      setRecentCommandes(commandesData);
+    } catch (err: any) {
+      console.error('Erreur lors du chargement du dashboard:', err);
+      setError(err.message || 'Impossible de charger les données depuis le serveur');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div>
+        <Header title="Dashboard" subtitle="Vue d'ensemble de votre activité" />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-secondary mx-auto mb-4" />
+            <p className="text-text-light">Chargement du dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <Header title="Dashboard" subtitle="Vue d'ensemble de votre activité" />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <AlertCircle className="w-12 h-12 text-danger mx-auto mb-4" />
+            <p className="text-lg font-semibold text-primary mb-2">Erreur de connexion</p>
+            <p className="text-text-light mb-4">{error}</p>
+            <Button onClick={fetchDashboardData} className="flex items-center gap-2 mx-auto">
+              <RefreshCw className="w-4 h-4" />
+              Réessayer
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
       <Header title="Dashboard" subtitle="Vue d'ensemble de votre activité" />
 
       <div className="p-4 sm:p-6">
+
         {/* Stats cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <StatCard
             title="Chiffre d'affaires"
-            value={formatPrice(dashboardStats.totalVentes)}
+            value={formatPrice(stats?.totalVentes || 0)}
             icon={DollarSign}
             trend={{ value: 12.5, isPositive: true }}
           />
           <StatCard
             title="Commandes en cours"
-            value={dashboardStats.commandesEnCours + dashboardStats.commandesValidees}
+            value={(stats?.commandesEnCours || 0) + (stats?.commandesValidees || 0)}
             icon={ShoppingCart}
             trend={{ value: 8, isPositive: true }}
           />
           <StatCard
             title="Clients"
-            value={dashboardStats.totalClients + dashboardStats.totalSocietes}
+            value={stats?.nombreClients || 0}
             icon={Users}
             trend={{ value: 3, isPositive: true }}
           />
           <StatCard
             title="Véhicules en stock"
-            value={dashboardStats.vehiculesEnStock}
+            value={stats?.stockTotal || 0}
             icon={Package}
             trend={{ value: -5, isPositive: false }}
           />
@@ -60,8 +167,8 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="h-64 flex items-end justify-between gap-2">
-                {dashboardStats.ventesParMois.map((item, index) => {
-                  const maxValue = Math.max(...dashboardStats.ventesParMois.map(v => v.montant));
+                {ventesParMois.map((item, index) => {
+                  const maxValue = Math.max(...ventesParMois.map(v => v.montant));
                   const height = maxValue > 0 ? (item.montant / maxValue) * 100 : 0;
                   return (
                     <div key={index} className="flex-1 flex flex-col items-center gap-2">
@@ -86,10 +193,12 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {dashboardStats.ventesParPays.map((item) => (
-                  <div key={item.code}>
+                {ventesParPays.map((item) => (
+                  <div key={item.pays}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-primary">{item.pays}</span>
+                      <span className="text-sm font-medium text-primary">
+                        {commandeService.getPaysLabel(item.pays)}
+                      </span>
                       <span className="text-sm text-text-light">{item.pourcentage}%</span>
                     </div>
                     <div className="w-full bg-gray-100 rounded-full h-2">
@@ -128,25 +237,29 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {recentCommandes.map((commande) => {
-                      const utilisateur = getUtilisateurById(commande.utilisateurId);
-                      const clientName = utilisateur
-                        ? utilisateur.type === 'CLIENT'
-                          ? `${utilisateur.prenom} ${utilisateur.nom}`
-                          : utilisateur.nom
-                        : 'Inconnu';
+                    {recentCommandes.map((commande: any) => {
+                      // Récupérer le nom du client depuis les données API
+                      const clientName = commande.utilisateur
+                        ? commande.utilisateur.prenom
+                          ? `${commande.utilisateur.prenom} ${commande.utilisateur.nom}`
+                          : commande.utilisateur.nom
+                        : 'Client';
+
+                      const reference = commande.reference || `CMD-${commande.idCommande || commande.id}`;
+                      const montant = commande.montantTTC || commande.total || 0;
+                      const date = commande.dateCommande || commande.date;
 
                       return (
-                        <tr key={commande.id} className="border-b border-gray-50 hover:bg-gray-50">
-                          <td className="py-3 text-sm font-medium text-primary">{commande.reference}</td>
+                        <tr key={commande.idCommande || commande.id} className="border-b border-gray-50 hover:bg-gray-50">
+                          <td className="py-3 text-sm font-medium text-primary">{reference}</td>
                           <td className="py-3 text-sm text-text">{clientName}</td>
-                          <td className="py-3 text-sm font-semibold text-secondary">{formatPrice(commande.montantTTC)}</td>
+                          <td className="py-3 text-sm font-semibold text-secondary">{formatPrice(montant)}</td>
                           <td className="py-3">
                             <Badge variant={getStatutColor(commande.statut) as any}>
                               {getStatutLabel(commande.statut)}
                             </Badge>
                           </td>
-                          <td className="py-3 text-sm text-text-light">{formatDate(commande.dateCommande)}</td>
+                          <td className="py-3 text-sm text-text-light">{formatDate(date)}</td>
                         </tr>
                       );
                     })}
@@ -156,34 +269,48 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Top vehicles */}
+          {/* Quick actions */}
           <Card>
             <CardHeader>
-              <CardTitle>Top véhicules vendus</CardTitle>
+              <CardTitle>Actions rapides</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {dashboardStats.topVehicules.map((item, index) => {
-                  return (
-                    <div key={item.vehiculeId} className="flex items-center gap-4">
-                      <div className="w-8 h-8 bg-secondary/10 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-bold text-secondary">{index + 1}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-primary truncate">{item.nom}</p>
-                        <p className="text-xs text-text-light">{item.ventes} vente(s)</p>
-                      </div>
-                      <p className="text-sm font-semibold text-secondary">{formatPrice(item.montant)}</p>
-                    </div>
-                  );
-                })}
+              <div className="space-y-3">
+                <a
+                  href="/vehicules"
+                  className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <p className="font-medium text-primary">Gérer les véhicules</p>
+                  <p className="text-sm text-text-light">Ajouter, modifier ou supprimer</p>
+                </a>
+                <a
+                  href="/commandes"
+                  className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <p className="font-medium text-primary">Traiter les commandes</p>
+                  <p className="text-sm text-text-light">Valider ou livrer les commandes</p>
+                </a>
+                <a
+                  href="/stock"
+                  className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <p className="font-medium text-primary">Gérer le stock</p>
+                  <p className="text-sm text-text-light">Mettre à jour les quantités</p>
+                </a>
+                <a
+                  href="/clients"
+                  className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <p className="font-medium text-primary">Voir les clients</p>
+                  <p className="text-sm text-text-light">Consulter les profils clients</p>
+                </a>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Low stock alert */}
-        {dashboardStats.vehiculesFaibleStock > 0 && (
+        {stockFaible > 0 && (
           <Card className="mt-6 border-warning/50 bg-warning/5">
             <CardContent className="flex items-center gap-4 py-4">
               <div className="p-3 bg-warning/20 rounded-lg">
@@ -192,7 +319,7 @@ export default function Dashboard() {
               <div>
                 <p className="font-semibold text-primary">Alerte stock faible</p>
                 <p className="text-sm text-text-light">
-                  {dashboardStats.vehiculesFaibleStock} véhicule(s) ont un stock faible (≤ 3 unités)
+                  {stockFaible} véhicule(s) ont un stock faible (≤ 3 unités)
                 </p>
               </div>
               <a
