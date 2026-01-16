@@ -406,7 +406,7 @@ function StockRow({
         )}
       </td>
       <td className="table-cell font-semibold text-secondary">{formatPrice(stockValue)}</td>
-      <td className="table-cell text-text-light">{formatDate(vehicule.stock?.dateEntre)}</td>
+      <td className="table-cell text-text-light">{formatDate(vehicule.stock?.dateEntre || '')}</td>
       <td className="table-cell">{getStockBadge(stockQty)}</td>
       <td className="table-cell">
         <div className="flex items-center gap-2">

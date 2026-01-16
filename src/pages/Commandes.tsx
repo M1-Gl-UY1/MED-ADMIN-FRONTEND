@@ -127,7 +127,7 @@ export default function Commandes() {
   const handleValiderCommande = async (id: number) => {
     try {
       const updated = await commandeService.executer(id);
-      setCommandes(prev => prev.map(c => c.idCommande === id || c.id === id ? updated : c));
+      setCommandes(prev => prev.map(c => c.idCommande === id ? updated : c));
     } catch (err) {
       console.error('Erreur lors de la validation:', err);
       alert('Erreur lors de la validation de la commande');
@@ -137,7 +137,7 @@ export default function Commandes() {
   const handleMarquerLivree = async (id: number) => {
     try {
       const updated = await commandeService.marquerLivree(id);
-      setCommandes(prev => prev.map(c => c.idCommande === id || c.id === id ? updated : c));
+      setCommandes(prev => prev.map(c => c.idCommande === id ? updated : c));
     } catch (err) {
       console.error('Erreur lors du marquage:', err);
       alert('Erreur lors du marquage de la commande comme livrée');
@@ -149,7 +149,7 @@ export default function Commandes() {
   }, []);
 
   const filteredCommandes = commandes.filter((c) => {
-    const reference = c.reference || `CMD-${c.idCommande || c.id}`;
+    const reference = c.reference || `CMD-${c.idCommande}`;
     const matchSearch = reference.toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatut = filterStatut === 'ALL' || c.statut === filterStatut;
     return matchSearch && matchStatut;
@@ -172,10 +172,10 @@ export default function Commandes() {
   };
 
   const stats = {
-    enCours: commandes.filter((c) => c.statut === 'EN_COURS' || c.statut === 'ACTIF').length,
+    enCours: commandes.filter((c) => c.statut === 'ACTIF').length,
     validees: commandes.filter((c) => c.statut === 'VALIDEE').length,
-    livrees: commandes.filter((c) => c.statut === 'LIVREE' || c.statut === 'CONVERTI').length,
-    total: commandes.reduce((acc, c) => acc + (c.total || c.montantTTC || 0), 0),
+    livrees: commandes.filter((c) => c.statut === 'CONVERTI').length,
+    total: commandes.reduce((acc, c) => acc + (c.total || 0), 0),
   };
 
   if (loading) {
@@ -307,12 +307,12 @@ export default function Commandes() {
                 <tbody className="divide-y divide-gray-100">
                   {paginatedCommandes.map((commande) => (
                     <OrderRow
-                      key={commande.idCommande || commande.id}
+                      key={commande.idCommande}
                       commande={commande}
-                      isExpanded={expandedOrder === (commande.idCommande || commande.id)}
-                      onToggle={() => setExpandedOrder(expandedOrder === (commande.idCommande || commande.id) ? null : (commande.idCommande || commande.id))}
-                      onValider={() => handleValiderCommande(commande.idCommande || commande.id)}
-                      onMarquerLivree={() => handleMarquerLivree(commande.idCommande || commande.id)}
+                      isExpanded={expandedOrder === commande.idCommande}
+                      onToggle={() => setExpandedOrder(expandedOrder === commande.idCommande ? null : commande.idCommande)}
+                      onValider={() => handleValiderCommande(commande.idCommande)}
+                      onMarquerLivree={() => handleMarquerLivree(commande.idCommande)}
                     />
                   ))}
                 </tbody>
@@ -358,9 +358,9 @@ function OrderRow({
   onValider: () => void;
   onMarquerLivree: () => void;
 }) {
-  const reference = commande.reference || `CMD-${commande.idCommande || commande.id}`;
-  const montant = commande.total || commande.montantTTC || 0;
-  const date = commande.date || commande.dateCommande;
+  const reference = commande.reference || `CMD-${commande.idCommande}`;
+  const montant = commande.total || 0;
+  const date = commande.date;
 
   return (
     <>
@@ -481,7 +481,7 @@ function OrderRow({
                     <div>
                       <span className="text-text-light">Mode paiement</span>
                       <p className="font-medium">
-                        {getMethodePaiementLabel((commande as any).typePaiement || commande.methodePaiement)}
+                        {getMethodePaiementLabel(commande.typePaiement)}
                       </p>
                     </div>
                     <div>
@@ -598,9 +598,9 @@ function generateFacturePDFContent(commande: Commande) {
   const { jsPDF } = (window as any).jspdf;
   const doc = new jsPDF();
 
-  const reference = commande.reference || `CMD-${commande.idCommande || (commande as any).id}`;
-  const montant = (commande as any).total || commande.montantTTC || 0;
-  const date = (commande as any).date || commande.dateCommande || new Date().toISOString();
+  const reference = commande.reference || `CMD-${commande.idCommande}`;
+  const montant = commande.total || 0;
+  const date = commande.date || new Date().toISOString();
   const lignes = getLignesCommande(commande);
 
   // En-tête
@@ -736,9 +736,9 @@ function generateBonCommandePDFContent(commande: Commande) {
   const { jsPDF } = (window as any).jspdf;
   const doc = new jsPDF();
 
-  const reference = commande.reference || `CMD-${commande.idCommande || (commande as any).id}`;
-  const montant = (commande as any).total || commande.montantTTC || 0;
-  const date = (commande as any).date || commande.dateCommande || new Date().toISOString();
+  const reference = commande.reference || `CMD-${commande.idCommande}`;
+  const montant = commande.total || 0;
+  const date = commande.date || new Date().toISOString();
   const lignes = getLignesCommande(commande);
 
   // En-tête
@@ -786,7 +786,7 @@ function generateBonCommandePDFContent(commande: Commande) {
   y += 6;
   doc.text(`Adresse: ${commande.adresseLivraison || 'Non renseignée'}`, 20, y);
   y += 6;
-  doc.text(`Mode de paiement: ${getMethodePaiementLabel((commande as any).typePaiement || commande.methodePaiement)}`, 20, y);
+  doc.text(`Mode de paiement: ${getMethodePaiementLabel(commande.typePaiement)}`, 20, y);
 
   // Véhicules
   y += 15;

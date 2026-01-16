@@ -1,5 +1,5 @@
 import { useFetch } from './useFetch';
-import { dashboardService, vehiculeService, commandeService, clientService, stockService } from '../services';
+import { dashboardService, vehiculeService, commandeService, clientService, stockService, societeService } from '../services';
 import type { DashboardComplet, Vehicule, Commande, VehiculeFilters, CommandeFilters } from '../services/types';
 
 /**
@@ -113,7 +113,7 @@ export function useClients() {
  */
 export function useSocietes() {
   const fetchFn = async () => {
-    const result = await clientService.getAllSocietes({ size: 1000 });
+    const result = await societeService.getAllFiltered({ size: 1000 });
     return result.societes;
   };
 

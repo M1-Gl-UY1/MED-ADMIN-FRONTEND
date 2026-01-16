@@ -11,7 +11,6 @@ import {
   Edit,
   Trash2,
   Eye,
-  ChevronRight,
   Loader2,
   AlertCircle,
   RefreshCw,
@@ -32,10 +31,6 @@ const formatDate = (dateString: string): string => {
     month: 'short',
     year: 'numeric',
   }).format(date);
-};
-
-const formatPrice = (price: number): string => {
-  return new Intl.NumberFormat('fr-FR').format(price) + ' FCFA';
 };
 
 export default function Clients() {
@@ -91,8 +86,8 @@ export default function Clients() {
       (s.email || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Only keep parent societies (not filiales)
-  const parentSocietes = filteredSocietes.filter((s) => !s.societeMereId);
+  // Liste des sociétés filtrées
+  const parentSocietes = filteredSocietes;
 
   // Reset page when filters/tab change
   useEffect(() => {
@@ -213,7 +208,7 @@ export default function Clients() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {paginatedClients.map((client) => (
                 <ClientCard
-                  key={client.idClient || client.id}
+                  key={client.idUtilisateur}
                   client={client}
                 />
               ))}
@@ -243,9 +238,8 @@ export default function Clients() {
             <div className="space-y-4">
               {paginatedSocietes.map((societe) => (
                 <SocieteCard
-                  key={societe.idSociete || societe.id}
+                  key={societe.idUtilisateur}
                   societe={societe}
-                  filiales={societes.filter((s) => s.societeMereId === (societe.idSociete || societe.id))}
                 />
               ))}
               {parentSocietes.length === 0 && (
@@ -311,9 +305,9 @@ function ClientCard({ client }: { client: Client }) {
             </div>
             <div>
               <h3 className="font-semibold text-primary">{client.prenom} {client.nom}</h3>
-              {client.genre && (
-                <Badge variant={client.genre === 'M' ? 'info' : 'premium'}>
-                  {client.genre === 'M' ? 'Homme' : 'Femme'}
+              {client.sexe && (
+                <Badge variant={client.sexe === 'M' ? 'info' : 'premium'}>
+                  {client.sexe === 'M' ? 'Homme' : 'Femme'}
                 </Badge>
               )}
             </div>
@@ -352,13 +346,13 @@ function ClientCard({ client }: { client: Client }) {
           </div>
           <div className="flex items-center gap-2 text-sm text-text-light">
             <Calendar className="w-4 h-4" />
-            <span>Inscrit le {formatDate(client.dateInscription)}</span>
+            <span>Date naissance: {formatDate(client.dateNaissance || '')}</span>
           </div>
         </div>
 
         <div className="pt-4 border-t border-gray-100">
           <p className="text-xs text-text-light">ID Client</p>
-          <p className="text-sm font-medium text-primary">#{client.idClient || client.id}</p>
+          <p className="text-sm font-medium text-primary">#{client.idUtilisateur}</p>
         </div>
       </CardContent>
     </Card>
@@ -367,13 +361,9 @@ function ClientCard({ client }: { client: Client }) {
 
 function SocieteCard({
   societe,
-  filiales,
 }: {
   societe: Societe;
-  filiales: Societe[];
 }) {
-  const [expanded, setExpanded] = useState(false);
-
   return (
     <Card>
       <CardContent>
@@ -384,17 +374,11 @@ function SocieteCard({
             </div>
             <div>
               <h3 className="font-semibold text-primary text-lg">{societe.nom}</h3>
-              <p className="text-sm text-text-light">N° Fiscal: {societe.numeroFiscal || 'N/A'}</p>
+              <p className="text-sm text-text-light">N° Taxe: {societe.numeroTaxe || 'N/A'}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-6">
-            {filiales.length > 0 && (
-              <div className="text-center">
-                <p className="text-xs text-text-light">Filiales</p>
-                <p className="text-xl font-semibold text-primary">{filiales.length}</p>
-              </div>
-            )}
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm">
                 <Eye className="w-4 h-4 mr-1" /> Voir
@@ -415,44 +399,12 @@ function SocieteCard({
             <Phone className="w-4 h-4" />
             {societe.telephone || 'N/A'}
           </div>
-          <div className="flex items-center gap-1">
-            <Calendar className="w-4 h-4" />
-            Inscrit le {formatDate(societe.dateInscription)}
-          </div>
+          {societe.adresse && (
+            <div className="flex items-center gap-1">
+              {societe.adresse}, {societe.ville || ''} {societe.pays || ''}
+            </div>
+          )}
         </div>
-
-        {/* Filiales */}
-        {filiales.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="flex items-center gap-2 text-sm font-medium text-primary hover:text-secondary transition-colors"
-            >
-              <ChevronRight className={`w-4 h-4 transition-transform ${expanded ? 'rotate-90' : ''}`} />
-              {filiales.length} filiale(s)
-            </button>
-
-            {expanded && (
-              <div className="mt-3 space-y-2 pl-6">
-                {filiales.map((filiale) => (
-                  <div
-                    key={filiale.idSociete || filiale.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Building2 className="w-5 h-5 text-text-light" />
-                      <div>
-                        <p className="font-medium text-text">{filiale.nom}</p>
-                        <p className="text-xs text-text-light">{filiale.email}</p>
-                      </div>
-                    </div>
-                    <Badge variant="info">Filiale</Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </CardContent>
     </Card>
   );
@@ -589,7 +541,7 @@ function AddSocieteModal({ onClose, onSuccess }: { onClose: () => void; onSucces
     nom: '',
     email: '',
     motDePasse: '',
-    numeroFiscal: '',
+    numeroTaxe: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -655,12 +607,12 @@ function AddSocieteModal({ onClose, onSuccess }: { onClose: () => void; onSucces
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Numéro fiscal *</label>
+            <label className="block text-sm font-medium mb-1">Numéro de taxe *</label>
             <input
               type="text"
               className="input"
-              value={formData.numeroFiscal}
-              onChange={e => setFormData(prev => ({ ...prev, numeroFiscal: e.target.value }))}
+              value={formData.numeroTaxe}
+              onChange={e => setFormData(prev => ({ ...prev, numeroTaxe: e.target.value }))}
               placeholder="Ex: FR12345678901"
               required
             />

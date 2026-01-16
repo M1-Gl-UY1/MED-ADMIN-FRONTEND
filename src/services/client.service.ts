@@ -1,6 +1,6 @@
 import { api } from './api';
 import { societeService } from './societe.service';
-import type { Client, Societe, ClientFilters, UtilisateurComplet } from './types';
+import type { Client, ClientFilters, UtilisateurComplet } from './types';
 
 const ENDPOINTS = {
   CLIENTS: '/api/clients',
@@ -43,7 +43,7 @@ export const clientService = {
   /**
    * Créer un nouveau client
    */
-  async create(data: Omit<Client, 'idClient'>): Promise<Client> {
+  async create(data: Omit<Client, 'idUtilisateur'>): Promise<Client> {
     const response = await api.post<Client>(ENDPOINTS.CLIENTS, data);
     return response.data;
   },
@@ -92,12 +92,10 @@ export const clientService = {
         clientsParPays[pays] = (clientsParPays[pays] || 0) + 1;
       });
 
-      const filiales = societes.filter(s => s.societeMereId);
-
       return {
         totalClients: clients.length,
         totalSocietes: societes.length,
-        totalFiliales: filiales.length,
+        totalFiliales: 0,
         clientsParPays,
       };
     } catch {
@@ -121,11 +119,7 @@ export const clientService = {
         societeService.getAll().catch(() => []),
       ]);
 
-      return [...clients, ...societes].sort((a, b) => {
-        const dateA = new Date(a.dateInscription || 0);
-        const dateB = new Date(b.dateInscription || 0);
-        return dateB.getTime() - dateA.getTime();
-      });
+      return [...clients, ...societes];
     } catch {
       return [];
     }

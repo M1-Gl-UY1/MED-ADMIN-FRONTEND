@@ -4,7 +4,7 @@ import type {
   HalResponse,
   PaysLivraison,
   StatutCommande,
-  MethodePaiement,
+  TypeMethodePaiement,
   CommandeFilters,
   UpdateCommandeStatutDTO
 } from './types';
@@ -156,31 +156,32 @@ export const commandeService = {
 
     return {
       total: commandes.length,
-      enCours: commandes.filter(c => c.statut === 'EN_COURS' || c.statut === 'ACTIF').length,
-      validees: commandes.filter(c => c.statut === 'VALIDEE' || c.statut === 'VALIDE').length,
-      livrees: commandes.filter(c => c.statut === 'LIVREE').length,
-      // Utiliser total (backend) ou montantTTC (frontend alias)
-      montantTotal: commandes.reduce((sum, c) => sum + (c.total || c.montantTTC || 0), 0),
+      enCours: commandes.filter(c => c.statut === 'ACTIF').length,
+      validees: commandes.filter(c => c.statut === 'VALIDEE' || c.statut === 'CONVERTI').length,
+      livrees: commandes.filter(c => c.statut === 'REFUSEE').length,
+      montantTotal: commandes.reduce((sum, c) => sum + (c.total || 0), 0),
     };
   },
 
   // Helpers
-  getStatutLabel(statut: StatutCommande): string {
-    const labels: Record<StatutCommande, string> = {
-      EN_COURS: 'En cours',
+  getStatutLabel(statut: StatutCommande | string): string {
+    const labels: Record<string, string> = {
+      ACTIF: 'En cours',
+      CONVERTI: 'Convertie',
       VALIDEE: 'Validée',
-      LIVREE: 'Livrée',
+      REFUSEE: 'Refusée',
     };
-    return labels[statut];
+    return labels[statut] || statut;
   },
 
-  getStatutColor(statut: StatutCommande): 'warning' | 'info' | 'success' {
-    const colors: Record<StatutCommande, 'warning' | 'info' | 'success'> = {
-      EN_COURS: 'warning',
-      VALIDEE: 'info',
-      LIVREE: 'success',
+  getStatutColor(statut: StatutCommande | string): 'warning' | 'info' | 'success' | 'error' {
+    const colors: Record<string, 'warning' | 'info' | 'success' | 'error'> = {
+      ACTIF: 'warning',
+      CONVERTI: 'info',
+      VALIDEE: 'success',
+      REFUSEE: 'error',
     };
-    return colors[statut];
+    return colors[statut] || 'warning';
   },
 
   getPaysLabel(pays: PaysLivraison): string {
@@ -193,14 +194,14 @@ export const commandeService = {
     return labels[pays];
   },
 
-  getMethodePaiementLabel(methode: MethodePaiement): string {
-    const labels: Record<MethodePaiement, string> = {
+  getMethodePaiementLabel(methode: TypeMethodePaiement | string): string {
+    const labels: Record<string, string> = {
       CARTE_BANCAIRE: 'Carte bancaire',
       PAYPAL: 'PayPal',
       COMPTANT: 'Comptant',
       CREDIT: 'Crédit',
     };
-    return labels[methode];
+    return labels[methode] || methode;
   },
 
   calculerTaxes(montantHT: number, pays: PaysLivraison): number {

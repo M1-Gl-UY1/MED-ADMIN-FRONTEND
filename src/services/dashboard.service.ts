@@ -67,8 +67,7 @@ export const dashboardService = {
       const parMois: Record<string, { montant: number; count: number }> = {};
 
       commandes.forEach(c => {
-        // Utiliser date (backend) ou dateCommande (frontend alias)
-        const dateStr = c.date || c.dateCommande;
+        const dateStr = c.date;
         if (!dateStr) return;
         const date = new Date(dateStr);
         const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -76,8 +75,7 @@ export const dashboardService = {
         if (!parMois[key]) {
           parMois[key] = { montant: 0, count: 0 };
         }
-        // Utiliser total (backend) ou montantTTC (frontend alias)
-        parMois[key].montant += c.total || c.montantTTC || 0;
+        parMois[key].montant += c.total || 0;
         parMois[key].count += 1;
       });
 
@@ -122,8 +120,7 @@ export const dashboardService = {
       let total = 0;
       commandes.forEach(c => {
         if (c.paysLivraison && parPays[c.paysLivraison] !== undefined) {
-          // Utiliser total (backend) ou montantTTC (frontend alias)
-          const montant = c.total || c.montantTTC || 0;
+          const montant = c.total || 0;
           parPays[c.paysLivraison] += montant;
           total += montant;
         }
@@ -161,7 +158,7 @@ export const dashboardService = {
       const ventesParVehicule: Record<number, { quantite: number; ca: number }> = {};
 
       commandes.forEach(c => {
-        c.lignes?.forEach(ligne => {
+        (c.lignesCommandes || []).forEach(ligne => {
           const vehiculeId = ligne.vehicule?.idVehicule;
           if (vehiculeId) {
             if (!ventesParVehicule[vehiculeId]) {

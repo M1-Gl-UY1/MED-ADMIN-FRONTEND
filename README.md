@@ -28,7 +28,7 @@ Interface d'administration pour MED Motors - Gestion des vehicules, commandes, c
 
 ### Gestion des Commandes
 - Liste des commandes
-- Suivi des statuts (En cours, Validee, Livree)
+- Suivi des statuts (ACTIF, CONVERTI, VALIDEE, REFUSEE)
 - Details et documents
 
 ### Gestion des Clients
@@ -156,8 +156,10 @@ npm run preview
 
 1. **Demarrer le backend** Spring Boot sur le port 8085
 2. **Lancer l'admin** : `npm run dev`
-3. **Acceder** a `http://localhost:5174` (ou port affiche)
+3. **Acceder** a `http://localhost:5174`
 4. **Se connecter** avec `admin-med@gmail.com` / `12345678`
+
+> **Note** : Le port 5174 est configure dans `vite.config.ts` pour eviter les conflits avec le frontend client (port 5173).
 
 ## Routes
 
@@ -205,3 +207,26 @@ Les composants UI sont definis dans `src/components/ui/index.tsx` :
 - Les endpoints `/api/stats/**` et `/api/admin/**` requierent le role `ADMIN`
 - Les operations d'ecriture sur `/api/vehicules/**` requierent le role `ADMIN`
 - Le token expire apres 8 heures (configurable dans le backend)
+
+## Alignement des types avec le backend
+
+Les types TypeScript (`src/services/types.ts`) sont alignes avec les entites du backend Spring Boot :
+
+### StatutCommande
+```typescript
+type StatutCommande = 'ACTIF' | 'CONVERTI' | 'VALIDEE' | 'REFUSEE';
+```
+
+### Mapping des proprietes
+| Frontend | Backend | Description |
+|----------|---------|-------------|
+| `idUtilisateur` | `id_utilisateur` | ID utilisateur (Client/Societe) |
+| `numeroTaxe` | `numero_taxe` | Numero fiscal (Societe) |
+| `sexe` | `sexe` | Genre (M/F) |
+| `date` | `date_commande` | Date de commande |
+| `total` | `total` | Montant TTC |
+| `taxe` | `taxe` | Montant taxes |
+| `typePaiement` | `type_paiement` | Mode de paiement |
+| `lignesCommandes` | `lignes_commandes` | Lignes de commande |
+| `optionsIncompatible` | `options_incompatible` | Options incompatibles |
+| `dateEntre` | `date_entre` | Date entree stock |

@@ -1,4 +1,4 @@
-import type { ReactNode, HTMLAttributes } from 'react';
+import type { ReactNode, HTMLAttributes, ButtonHTMLAttributes } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 // Card components
@@ -104,10 +104,9 @@ export function Badge({ children, variant = 'neutral', className = '' }: BadgePr
 }
 
 // Button component
-interface ButtonProps extends HTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
-  disabled?: boolean;
   children: ReactNode;
 }
 

@@ -9,7 +9,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
-import { Card, CardHeader, CardTitle, CardContent, StatCard, Badge, Alert, Button } from '../components/ui';
+import { Card, CardHeader, CardTitle, CardContent, StatCard, Badge, Button } from '../components/ui';
 import { dashboardService, commandeService } from '../services';
 import type { DashboardStats, VentesParPays, Commande } from '../services/types';
 

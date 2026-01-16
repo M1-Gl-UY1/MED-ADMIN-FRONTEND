@@ -25,7 +25,7 @@ export const societeService = {
       societes = societes.filter(s =>
         (s.nom || '').toLowerCase().includes(searchLower) ||
         (s.email || '').toLowerCase().includes(searchLower) ||
-        (s.numeroFiscal || '').toLowerCase().includes(searchLower)
+        (s.numeroTaxe || '').toLowerCase().includes(searchLower)
       );
     }
 
@@ -50,7 +50,7 @@ export const societeService = {
   /**
    * Créer une nouvelle société
    */
-  async create(data: Omit<Societe, 'idSociete'>): Promise<Societe> {
+  async create(data: Omit<Societe, 'idUtilisateur'>): Promise<Societe> {
     const response = await api.post<Societe>(ENDPOINTS.SOCIETES, data);
     return response.data;
   },
@@ -68,22 +68,6 @@ export const societeService = {
    */
   async delete(id: number): Promise<void> {
     await api.delete(`${ENDPOINTS.SOCIETES}/${id}`);
-  },
-
-  /**
-   * Récupérer les filiales d'une société mère
-   */
-  async getFiliales(societeMereId: number): Promise<Societe[]> {
-    const societes = await this.getAll();
-    return societes.filter(s => s.societeMereId === societeMereId);
-  },
-
-  /**
-   * Récupérer les sociétés mères (sans societeMereId)
-   */
-  async getSocietesMeres(): Promise<Societe[]> {
-    const societes = await this.getAll();
-    return societes.filter(s => !s.societeMereId);
   },
 };
 
