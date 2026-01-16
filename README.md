@@ -1,73 +1,207 @@
-# React + TypeScript + Vite
+# MED Admin - Panneau d'Administration
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interface d'administration pour MED Motors - Gestion des vehicules, commandes, clients et statistiques.
 
-Currently, two official plugins are available:
+## Technologies
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React 19** avec TypeScript
+- **Vite** pour le bundling et le dev server
+- **Tailwind CSS 4** pour le styling
+- **React Router DOM** pour la navigation
+- **Axios** pour les requetes HTTP
+- **Lucide React** pour les icones
+- **Recharts** pour les graphiques
 
-## React Compiler
+## Fonctionnalites
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Dashboard
+- Statistiques de ventes
+- Graphiques de performance
+- Commandes recentes
+- Alertes stock bas
 
-## Expanding the ESLint configuration
+### Gestion des Vehicules
+- Liste des vehicules avec pagination
+- Ajout/Modification/Suppression
+- Gestion des images
+- Configuration des options
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Gestion des Commandes
+- Liste des commandes
+- Suivi des statuts (En cours, Validee, Livree)
+- Details et documents
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Gestion des Clients
+- Liste des clients (Particuliers et Societes)
+- Details des comptes
+- Historique des commandes par client
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Gestion du Stock
+- Suivi des quantites
+- Alertes de rupture
+- Historique des mouvements
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Parametres
+- Configuration de l'application
+
+## Authentification JWT
+
+### Acces Administrateur
+
+L'acces au panneau d'administration requiert un compte administrateur.
+
+**Compte par defaut :**
+- Email : `admin-med@gmail.com`
+- Mot de passe : `12345678`
+
+### Flux d'authentification
+
+1. L'utilisateur accede a `/login`
+2. Saisie des identifiants admin
+3. Appel a `/api/auth/admin/login`
+4. Stockage du token JWT dans localStorage
+5. Redirection vers le dashboard
+6. Token valide automatiquement au rechargement
+
+### Protection des routes
+
+Toutes les routes (sauf `/login`) sont protegees par le composant `ProtectedRoute` :
+- Verifie la presence d'un token valide
+- Redirige vers `/login` si non authentifie
+- Affiche un loader pendant la verification
+
+### Deconnexion
+
+Le bouton de deconnexion dans le header :
+- Supprime le token du localStorage
+- Redirige vers la page de login
+
+## Structure du projet
+
+```
+src/
+├── components/
+│   ├── layout/
+│   │   ├── Layout.tsx       # Layout principal avec sidebar
+│   │   └── Header.tsx       # Header avec logout
+│   ├── ui/
+│   │   └── index.tsx        # Composants UI (Card, Button, Input...)
+│   └── ProtectedRoute.tsx   # Garde de route
+├── context/
+│   └── AuthContext.tsx      # Contexte d'authentification admin
+├── data/
+│   └── mockData.ts          # Donnees mock (dev)
+├── hooks/                   # Hooks personnalises
+├── lib/
+│   └── utils.ts             # Utilitaires
+├── pages/
+│   ├── Dashboard.tsx        # Tableau de bord
+│   ├── Vehicules.tsx        # Gestion vehicules
+│   ├── Commandes.tsx        # Gestion commandes
+│   ├── Clients.tsx          # Gestion clients
+│   ├── Stock.tsx            # Gestion stock
+│   ├── Parametres.tsx       # Parametres
+│   ├── Login.tsx            # Page de connexion
+│   └── index.ts             # Exports
+├── services/
+│   ├── api.ts               # Configuration Axios + token
+│   ├── auth.service.ts      # Service authentification admin
+│   ├── vehicule.service.ts
+│   ├── commande.service.ts
+│   ├── client.service.ts
+│   ├── societe.service.ts
+│   ├── stock.service.ts
+│   ├── dashboard.service.ts
+│   └── types.ts             # Types TypeScript
+├── App.tsx                  # Routes et providers
+└── main.tsx                 # Point d'entree
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Configuration
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Variables d'environnement
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Creer un fichier `.env` a la racine :
+
+```env
+VITE_API_BASE_URL=http://localhost:8085
+VITE_API_TIMEOUT=30000
 ```
+
+### Cle de stockage
+
+Le token admin est stocke separement du token client :
+- Admin : `med_admin_auth_token`
+- Client : `med_auth_token`
+
+Cela permet d'avoir des sessions separees.
+
+## Installation
+
+```bash
+# Installer les dependances
+npm install
+
+# Lancer le serveur de developpement
+npm run dev
+
+# Build pour la production
+npm run build
+
+# Preview du build
+npm run preview
+```
+
+## Demarrage
+
+1. **Demarrer le backend** Spring Boot sur le port 8085
+2. **Lancer l'admin** : `npm run dev`
+3. **Acceder** a `http://localhost:5174` (ou port affiche)
+4. **Se connecter** avec `admin-med@gmail.com` / `12345678`
+
+## Routes
+
+| Route | Page | Acces |
+|-------|------|-------|
+| `/login` | Connexion | Public |
+| `/` | Dashboard | Admin |
+| `/vehicules` | Gestion vehicules | Admin |
+| `/commandes` | Gestion commandes | Admin |
+| `/clients` | Gestion clients | Admin |
+| `/stock` | Gestion stock | Admin |
+| `/parametres` | Parametres | Admin |
+
+## Composants UI
+
+Les composants UI sont definis dans `src/components/ui/index.tsx` :
+
+- **Card** - Cartes avec header et contenu
+- **StatCard** - Carte de statistique avec icone et tendance
+- **Button** - Boutons avec variantes (primary, secondary, outline, ghost, danger)
+- **Input** - Champs de saisie avec label et erreur
+- **Select** - Menu deroulant
+- **Badge** - Badges de statut
+- **Table** - Tableau avec Th et Td
+- **Modal** - Fenetre modale
+- **Pagination** - Pagination avec info items
+- **Alert** - Alertes (info, success, warning, error)
+- **EmptyState** - Etat vide avec icone et action
+
+## API Endpoints utilises
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/auth/admin/login` | Connexion admin |
+| `GET /api/auth/me` | Validation token |
+| `GET /api/vehicules` | Liste vehicules |
+| `POST/PUT/DELETE /api/vehicules` | CRUD vehicules |
+| `GET /api/commandes` | Liste commandes |
+| `GET /api/clients` | Liste clients |
+| `GET /api/societes` | Liste societes |
+| `GET /api/stats` | Statistiques dashboard |
+
+## Securite
+
+- Les endpoints `/api/stats/**` et `/api/admin/**` requierent le role `ADMIN`
+- Les operations d'ecriture sur `/api/vehicules/**` requierent le role `ADMIN`
+- Le token expire apres 8 heures (configurable dans le backend)

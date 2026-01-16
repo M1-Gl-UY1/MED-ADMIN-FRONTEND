@@ -30,13 +30,19 @@ export const commandeService = {
    * Récupérer toutes les commandes avec pagination
    */
   async getAll(params?: CommandeFilters): Promise<{ commandes: Commande[]; total: number; totalPages: number }> {
-    const response = await api.get<HalResponse<Commande>>(ENDPOINTS.COMMANDES, {
+    const response = await api.get<Commande[] | HalResponse<Commande>>(ENDPOINTS.COMMANDES, {
       page: params?.page || 0,
       size: params?.size || 20,
       sort: params?.sort || 'dateCommande,desc',
     });
 
-    let commandes = response.data._embedded?.commandes || [];
+    // Gérer les deux formats de réponse possibles (tableau direct ou HAL)
+    let commandes: Commande[];
+    if (Array.isArray(response.data)) {
+      commandes = response.data;
+    } else {
+      commandes = response.data._embedded?.commandes || [];
+    }
 
     // Appliquer les filtres côté client si nécessaire
     if (params?.statut) {
@@ -50,15 +56,15 @@ export const commandeService = {
     if (params?.search) {
       const searchLower = params.search.toLowerCase();
       commandes = commandes.filter(c =>
-        c.reference.toLowerCase().includes(searchLower) ||
+        (c.reference || '').toLowerCase().includes(searchLower) ||
         c.utilisateur?.nom?.toLowerCase().includes(searchLower)
       );
     }
 
     return {
       commandes,
-      total: response.data.page?.totalElements || commandes.length,
-      totalPages: response.data.page?.totalPages || 1,
+      total: Array.isArray(response.data) ? commandes.length : (response.data.page?.totalElements || commandes.length),
+      totalPages: Array.isArray(response.data) ? 1 : (response.data.page?.totalPages || 1),
     };
   },
 
@@ -150,10 +156,11 @@ export const commandeService = {
 
     return {
       total: commandes.length,
-      enCours: commandes.filter(c => c.statut === 'EN_COURS').length,
-      validees: commandes.filter(c => c.statut === 'VALIDEE').length,
+      enCours: commandes.filter(c => c.statut === 'EN_COURS' || c.statut === 'ACTIF').length,
+      validees: commandes.filter(c => c.statut === 'VALIDEE' || c.statut === 'VALIDE').length,
       livrees: commandes.filter(c => c.statut === 'LIVREE').length,
-      montantTotal: commandes.reduce((sum, c) => sum + c.montantTTC, 0),
+      // Utiliser total (backend) ou montantTTC (frontend alias)
+      montantTotal: commandes.reduce((sum, c) => sum + (c.total || c.montantTTC || 0), 0),
     };
   },
 

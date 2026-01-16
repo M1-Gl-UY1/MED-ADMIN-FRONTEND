@@ -15,12 +15,17 @@ import type { DashboardStats, VentesParPays, Commande } from '../services/types'
 
 // Fonctions utilitaires locales (sans dépendance aux mock data)
 const formatPrice = (price: number): string => {
+  // Format compact pour gros montants
+  if (price >= 1000000000) {
+    return `${(price / 1000000000).toFixed(1)} Mrd`;
+  }
+  if (price >= 1000000) {
+    return `${(price / 1000000).toFixed(1)} M`;
+  }
   return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(price);
+  }).format(price) + ' XAF';
 };
 
 const formatDate = (dateString: string): string => {

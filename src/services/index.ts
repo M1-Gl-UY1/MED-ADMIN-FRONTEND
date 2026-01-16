@@ -3,6 +3,8 @@ export { default as apiClient, api, getToken, setToken, removeToken, getStoredUs
 export type { ApiResponse, ApiError, PaginatedResponse } from './api';
 
 // Export des services
+export { default as authService } from './auth.service';
+export type { Admin, LoginDTO } from './auth.service';
 export { default as vehiculeService } from './vehicule.service';
 export { default as commandeService, TAUX_TVA } from './commande.service';
 export { default as clientService } from './client.service';

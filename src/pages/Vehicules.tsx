@@ -13,6 +13,10 @@ import {
   AlertCircle,
   X,
   RefreshCw,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  ImageIcon,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import { Card, CardContent, Badge, Button, Pagination, Alert } from '../components/ui';
@@ -25,6 +29,25 @@ type TypeVehicule = 'AUTOMOBILE' | 'SCOOTER';
 const formatPrice = (price: number) => {
   return new Intl.NumberFormat('fr-FR').format(price) + ' FCFA';
 };
+
+// Couleurs prédéfinies avec leurs codes hex
+const PREDEFINED_COLORS = [
+  { name: 'Noir', hex: '#000000' },
+  { name: 'Blanc', hex: '#FFFFFF' },
+  { name: 'Gris', hex: '#808080' },
+  { name: 'Argent', hex: '#C0C0C0' },
+  { name: 'Rouge', hex: '#DC2626' },
+  { name: 'Bleu', hex: '#2563EB' },
+  { name: 'Bleu Marine', hex: '#1E3A5F' },
+  { name: 'Vert', hex: '#16A34A' },
+  { name: 'Jaune', hex: '#EAB308' },
+  { name: 'Orange', hex: '#EA580C' },
+  { name: 'Marron', hex: '#78350F' },
+  { name: 'Beige', hex: '#D4C4A8' },
+  { name: 'Bordeaux', hex: '#7F1D1D' },
+  { name: 'Or', hex: '#D4AF37' },
+  { name: 'Bronze', hex: '#CD7F32' },
+];
 
 export default function Vehicules() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,6 +63,9 @@ export default function Vehicules() {
 
   // Modal ajout véhicule
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Modal détails véhicule
+  const [selectedVehicule, setSelectedVehicule] = useState<Vehicule | null>(null);
 
   // Charger les véhicules depuis l'API
   const fetchVehicules = async () => {
@@ -210,7 +236,12 @@ export default function Vehicules() {
         {/* Vehicles grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {paginatedVehicules.map((vehicule) => (
-            <VehiculeCard key={vehicule.idVehicule} vehicule={vehicule} onDelete={handleDelete} />
+            <VehiculeCard
+              key={vehicule.idVehicule}
+              vehicule={vehicule}
+              onDelete={handleDelete}
+              onView={() => setSelectedVehicule(vehicule)}
+            />
           ))}
         </div>
 
@@ -247,11 +278,27 @@ export default function Vehicules() {
           }}
         />
       )}
+
+      {/* Modal Détails Véhicule */}
+      {selectedVehicule && (
+        <VehiculeDetailModal
+          vehicule={selectedVehicule}
+          onClose={() => setSelectedVehicule(null)}
+        />
+      )}
     </div>
   );
 }
 
-function VehiculeCard({ vehicule, onDelete }: { vehicule: Vehicule; onDelete: (id: number) => void }) {
+function VehiculeCard({
+  vehicule,
+  onDelete,
+  onView
+}: {
+  vehicule: Vehicule;
+  onDelete: (id: number) => void;
+  onView: () => void;
+}) {
   const [showMenu, setShowMenu] = useState(false);
 
   const imageUrl = vehicule.images?.[0]?.url || 'https://via.placeholder.com/400x300?text=No+Image';
@@ -259,8 +306,11 @@ function VehiculeCard({ vehicule, onDelete }: { vehicule: Vehicule; onDelete: (i
 
   return (
     <Card hover className="overflow-hidden p-0">
-      {/* Image */}
-      <div className="relative h-48 bg-gray-100">
+      {/* Image - Click to view */}
+      <div
+        className="relative h-48 bg-gray-100 cursor-pointer"
+        onClick={onView}
+      >
         <img
           src={imageUrl}
           alt={vehicule.nom}
@@ -275,7 +325,7 @@ function VehiculeCard({ vehicule, onDelete }: { vehicule: Vehicule; onDelete: (i
             )}
           </Badge>
         </div>
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-3 right-3" onClick={e => e.stopPropagation()}>
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
@@ -285,7 +335,10 @@ function VehiculeCard({ vehicule, onDelete }: { vehicule: Vehicule; onDelete: (i
             </button>
             {showMenu && (
               <div className="absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10">
-                <button className="w-full px-4 py-2 text-left text-sm text-text hover:bg-gray-50 flex items-center gap-2">
+                <button
+                  onClick={() => { onView(); setShowMenu(false); }}
+                  className="w-full px-4 py-2 text-left text-sm text-text hover:bg-gray-50 flex items-center gap-2"
+                >
                   <Eye className="w-4 h-4" /> Voir
                 </button>
                 <button className="w-full px-4 py-2 text-left text-sm text-text hover:bg-gray-50 flex items-center gap-2">
@@ -342,17 +395,103 @@ function VehiculeCard({ vehicule, onDelete }: { vehicule: Vehicule; onDelete: (i
   );
 }
 
+// Composant input prix formaté
+function PriceInput({
+  value,
+  onChange,
+  error
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  error?: string;
+}) {
+  const [displayValue, setDisplayValue] = useState(
+    value > 0 ? new Intl.NumberFormat('fr-FR').format(value) : ''
+  );
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\s/g, '').replace(/[^\d]/g, '');
+    const numericValue = parseInt(rawValue) || 0;
+
+    onChange(numericValue);
+
+    if (rawValue === '') {
+      setDisplayValue('');
+    } else {
+      setDisplayValue(new Intl.NumberFormat('fr-FR').format(numericValue));
+    }
+  };
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        className={`input pr-16 ${error ? 'border-error' : ''}`}
+        value={displayValue}
+        onChange={handleChange}
+        placeholder="0"
+      />
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-text-light">
+        FCFA
+      </span>
+    </div>
+  );
+}
+
+// Composant sélecteur de couleurs
+function ColorPicker({
+  selectedColors,
+  onColorToggle
+}: {
+  selectedColors: string[];
+  onColorToggle: (colorName: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-5 gap-2">
+      {PREDEFINED_COLORS.map((color) => {
+        const isSelected = selectedColors.includes(color.name);
+        return (
+          <button
+            key={color.name}
+            type="button"
+            onClick={() => onColorToggle(color.name)}
+            className={`relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
+              isSelected
+                ? 'border-secondary bg-secondary/5'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+            title={color.name}
+          >
+            <div
+              className="w-8 h-8 rounded-full border border-gray-300 shadow-sm"
+              style={{ backgroundColor: color.hex }}
+            />
+            <span className="text-xs text-text-light truncate w-full text-center">
+              {color.name}
+            </span>
+            {isSelected && (
+              <div className="absolute -top-1 -right-1 w-5 h-5 bg-secondary rounded-full flex items-center justify-center">
+                <Check className="w-3 h-3 text-white" />
+              </div>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+type Step = 'info' | 'specs' | 'images' | 'options';
+
 function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (v: Vehicule) => void }) {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [activeTab, setActiveTab] = useState<'info' | 'specs' | 'images' | 'options'>('info');
+  const [currentStep, setCurrentStep] = useState<Step>('info');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Images à uploader (fichiers)
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-
-  // Nouvelle couleur en cours de saisie
-  const [newColor, setNewColor] = useState('');
 
   const [formData, setFormData] = useState({
     // Informations de base
@@ -388,11 +527,61 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
     imageUrls: [] as string[],
   });
 
+  const steps: { id: Step; label: string; icon: React.ReactNode }[] = [
+    { id: 'info', label: 'Informations', icon: <span className="text-sm font-bold">1</span> },
+    { id: 'specs', label: 'Caractéristiques', icon: <span className="text-sm font-bold">2</span> },
+    { id: 'images', label: 'Images', icon: <span className="text-sm font-bold">3</span> },
+    { id: 'options', label: 'Options', icon: <span className="text-sm font-bold">4</span> },
+  ];
+
+  const currentStepIndex = steps.findIndex(s => s.id === currentStep);
+
+  // Validation par étape
+  const validateStep = (step: Step): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (step === 'info') {
+      if (!formData.nom.trim()) newErrors.nom = 'Le nom est obligatoire';
+      if (!formData.model.trim()) newErrors.model = 'Le modèle est obligatoire';
+      if (!formData.marque.trim()) newErrors.marque = 'La marque est obligatoire';
+      if (!formData.annee || formData.annee < 1900) newErrors.annee = 'L\'année est obligatoire';
+      if (!formData.prixBase || formData.prixBase <= 0) newErrors.prixBase = 'Le prix est obligatoire';
+    }
+
+    if (step === 'images') {
+      if (imageFiles.length === 0 && formData.imageUrls.length === 0) {
+        newErrors.images = 'Au moins une image est obligatoire';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (!validateStep(currentStep)) return;
+
+    const stepOrder: Step[] = ['info', 'specs', 'images', 'options'];
+    const currentIndex = stepOrder.indexOf(currentStep);
+    if (currentIndex < stepOrder.length - 1) {
+      setCurrentStep(stepOrder[currentIndex + 1]);
+    }
+  };
+
+  const handlePrevious = () => {
+    const stepOrder: Step[] = ['info', 'specs', 'images', 'options'];
+    const currentIndex = stepOrder.indexOf(currentStep);
+    if (currentIndex > 0) {
+      setCurrentStep(stepOrder[currentIndex - 1]);
+    }
+  };
+
   // Gérer l'ajout de fichiers images
   const handleImageFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
       setImageFiles(prev => [...prev, ...files]);
+      setErrors(prev => ({ ...prev, images: '' }));
 
       // Créer les previews
       files.forEach(file => {
@@ -411,27 +600,30 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Ajouter une couleur
-  const addColor = () => {
-    if (newColor.trim() && !formData.couleurs.includes(newColor.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        couleurs: [...prev.couleurs, newColor.trim()]
-      }));
-      setNewColor('');
-    }
-  };
-
-  // Supprimer une couleur
-  const removeColor = (color: string) => {
+  // Toggle couleur
+  const toggleColor = (colorName: string) => {
     setFormData(prev => ({
       ...prev,
-      couleurs: prev.couleurs.filter(c => c !== color)
+      couleurs: prev.couleurs.includes(colorName)
+        ? prev.couleurs.filter(c => c !== colorName)
+        : [...prev.couleurs, colorName]
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Ne soumettre que si on est sur l'étape finale
+    if (currentStep !== 'options') {
+      console.log('Submit bloqué - pas sur étape options, étape actuelle:', currentStep);
+      return;
+    }
+
+    // Valider toutes les étapes
+    if (!validateStep('info') || !validateStep('images')) {
+      return;
+    }
+
     setLoading(true);
     setUploadProgress(0);
 
@@ -490,13 +682,6 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
     }
   };
 
-  const tabs = [
-    { id: 'info' as const, label: 'Informations' },
-    { id: 'specs' as const, label: 'Caractéristiques' },
-    { id: 'images' as const, label: 'Images' },
-    { id: 'options' as const, label: 'Options' },
-  ];
-
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
@@ -508,77 +693,118 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b shrink-0">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'text-secondary border-b-2 border-secondary bg-secondary/5'
-                  : 'text-text-light hover:text-text hover:bg-gray-50'
-              }`}
-            >
-              {tab.label}
-            </button>
+        {/* Progress Steps */}
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-gray-50 shrink-0">
+          {steps.map((step, index) => (
+            <div key={step.id} className="flex items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  // Permettre de revenir en arrière seulement
+                  if (index < currentStepIndex) {
+                    setCurrentStep(step.id);
+                  }
+                }}
+                className={`flex items-center gap-2 ${
+                  index <= currentStepIndex ? 'cursor-pointer' : 'cursor-default'
+                }`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                    index < currentStepIndex
+                      ? 'bg-success text-white'
+                      : index === currentStepIndex
+                      ? 'bg-secondary text-white'
+                      : 'bg-gray-200 text-gray-500'
+                  }`}
+                >
+                  {index < currentStepIndex ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    step.icon
+                  )}
+                </div>
+                <span
+                  className={`text-sm font-medium hidden sm:block ${
+                    index === currentStepIndex ? 'text-secondary' : 'text-text-light'
+                  }`}
+                >
+                  {step.label}
+                </span>
+              </button>
+              {index < steps.length - 1 && (
+                <div
+                  className={`w-8 sm:w-16 h-0.5 mx-2 ${
+                    index < currentStepIndex ? 'bg-success' : 'bg-gray-200'
+                  }`}
+                />
+              )}
+            </div>
           ))}
         </div>
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="p-4 space-y-4">
-            {/* Tab: Informations de base */}
-            {activeTab === 'info' && (
+            {/* Step 1: Informations de base */}
+            {currentStep === 'info' && (
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Nom *</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Nom <span className="text-error">*</span>
+                    </label>
                     <input
                       type="text"
-                      className="input"
+                      className={`input ${errors.nom ? 'border-error' : ''}`}
                       value={formData.nom}
                       onChange={e => setFormData(prev => ({ ...prev, nom: e.target.value }))}
                       placeholder="Ex: Tesla Model 3"
-                      required
                     />
+                    {errors.nom && <p className="text-xs text-error mt-1">{errors.nom}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Modèle *</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Modèle <span className="text-error">*</span>
+                    </label>
                     <input
                       type="text"
-                      className="input"
+                      className={`input ${errors.model ? 'border-error' : ''}`}
                       value={formData.model}
                       onChange={e => setFormData(prev => ({ ...prev, model: e.target.value }))}
                       placeholder="Ex: Model 3"
-                      required
                     />
+                    {errors.model && <p className="text-xs text-error mt-1">{errors.model}</p>}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Marque *</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Marque <span className="text-error">*</span>
+                    </label>
                     <input
                       type="text"
-                      className="input"
+                      className={`input ${errors.marque ? 'border-error' : ''}`}
                       value={formData.marque}
                       onChange={e => setFormData(prev => ({ ...prev, marque: e.target.value }))}
                       placeholder="Ex: Tesla"
-                      required
                     />
+                    {errors.marque && <p className="text-xs text-error mt-1">{errors.marque}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Année *</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Année <span className="text-error">*</span>
+                    </label>
                     <input
                       type="number"
-                      className="input"
+                      className={`input ${errors.annee ? 'border-error' : ''}`}
                       value={formData.annee}
                       onChange={e => setFormData(prev => ({ ...prev, annee: parseInt(e.target.value) || new Date().getFullYear() }))}
                       min={2000}
                       max={2030}
-                      required
                     />
+                    {errors.annee && <p className="text-xs text-error mt-1">{errors.annee}</p>}
                   </div>
                 </div>
 
@@ -609,15 +835,15 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Prix de base (FCFA) *</label>
-                    <input
-                      type="number"
-                      className="input"
+                    <label className="block text-sm font-medium mb-1">
+                      Prix de base (FCFA) <span className="text-error">*</span>
+                    </label>
+                    <PriceInput
                       value={formData.prixBase}
-                      onChange={e => setFormData(prev => ({ ...prev, prixBase: parseInt(e.target.value) || 0 }))}
-                      min={0}
-                      required
+                      onChange={(value) => setFormData(prev => ({ ...prev, prixBase: value }))}
+                      error={errors.prixBase}
                     />
+                    {errors.prixBase && <p className="text-xs text-error mt-1">{errors.prixBase}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Stock initial</label>
@@ -634,7 +860,7 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                 <div>
                   <label className="block text-sm font-medium mb-1">Description</label>
                   <textarea
-                    className="input min-h-[100px]"
+                    className="input min-h-[80px]"
                     value={formData.description}
                     onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
                     placeholder="Description détaillée du véhicule..."
@@ -680,8 +906,8 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
               </>
             )}
 
-            {/* Tab: Caractéristiques techniques */}
-            {activeTab === 'specs' && (
+            {/* Step 2: Caractéristiques techniques */}
+            {currentStep === 'specs' && (
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -709,13 +935,18 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Carburant</label>
-                    <input
-                      type="text"
+                    <select
                       className="input"
                       value={formData.carburant}
                       onChange={e => setFormData(prev => ({ ...prev, carburant: e.target.value }))}
-                      placeholder="Ex: Essence, Diesel, Électrique"
-                    />
+                    >
+                      <option value="">Sélectionner...</option>
+                      <option value="Essence">Essence</option>
+                      <option value="Diesel">Diesel</option>
+                      <option value="Électrique">Électrique</option>
+                      <option value="Hybride">Hybride</option>
+                      <option value="GPL">GPL</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Consommation</label>
@@ -752,52 +983,51 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                   </div>
                 </div>
 
-                {/* Couleurs disponibles */}
+                {/* Sélecteur de couleurs */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Couleurs disponibles</label>
-                  <div className="flex gap-2 mb-2">
-                    <input
-                      type="text"
-                      className="input flex-1"
-                      value={newColor}
-                      onChange={e => setNewColor(e.target.value)}
-                      onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), addColor())}
-                      placeholder="Ajouter une couleur..."
-                    />
-                    <Button type="button" variant="outline" onClick={addColor}>
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.couleurs.map((color, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-sm"
-                      >
-                        {color}
-                        <button
-                          type="button"
-                          onClick={() => removeColor(color)}
-                          className="p-0.5 hover:bg-gray-200 rounded-full"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                    {formData.couleurs.length === 0 && (
-                      <span className="text-sm text-text-light">Aucune couleur ajoutée</span>
+                  <label className="block text-sm font-medium mb-3">
+                    Couleurs disponibles
+                    {formData.couleurs.length > 0 && (
+                      <span className="ml-2 text-secondary">({formData.couleurs.length} sélectionnée{formData.couleurs.length > 1 ? 's' : ''})</span>
                     )}
-                  </div>
+                  </label>
+                  <ColorPicker
+                    selectedColors={formData.couleurs}
+                    onColorToggle={toggleColor}
+                  />
+                  {formData.couleurs.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {formData.couleurs.map(color => (
+                        <span
+                          key={color}
+                          className="inline-flex items-center gap-1 px-3 py-1 bg-secondary/10 text-secondary rounded-full text-sm"
+                        >
+                          {color}
+                          <button
+                            type="button"
+                            onClick={() => toggleColor(color)}
+                            className="p-0.5 hover:bg-secondary/20 rounded-full"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </>
             )}
 
-            {/* Tab: Images */}
-            {activeTab === 'images' && (
+            {/* Step 3: Images */}
+            {currentStep === 'images' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Ajouter des images</label>
-                  <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center">
+                  <label className="block text-sm font-medium mb-2">
+                    Ajouter des images <span className="text-error">*</span>
+                  </label>
+                  <div className={`border-2 border-dashed rounded-lg p-6 text-center ${
+                    errors.images ? 'border-error bg-error/5' : 'border-gray-200'
+                  }`}>
                     <input
                       type="file"
                       id="imageUpload"
@@ -810,17 +1040,18 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                       htmlFor="imageUpload"
                       className="cursor-pointer flex flex-col items-center gap-2"
                     >
-                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                        <Plus className="w-6 h-6 text-text-light" />
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                        <ImageIcon className="w-8 h-8 text-text-light" />
                       </div>
-                      <span className="text-sm text-text-light">
+                      <span className="text-sm font-medium text-text">
                         Cliquez ou glissez vos images ici
                       </span>
                       <span className="text-xs text-text-light">
-                        PNG, JPG jusqu'à 10 MB
+                        PNG, JPG jusqu'à 10 MB (au moins une image requise)
                       </span>
                     </label>
                   </div>
+                  {errors.images && <p className="text-xs text-error mt-2">{errors.images}</p>}
                 </div>
 
                 {/* Prévisualisation des images */}
@@ -855,29 +1086,45 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                   </div>
                 )}
 
-                <div className="text-sm text-text-light bg-gray-50 rounded-lg p-3">
+                <div className="text-sm text-text-light bg-blue-50 rounded-lg p-3 border border-blue-100">
                   <strong>Note:</strong> La première image sera définie comme image principale du véhicule.
-                  Vous pouvez modifier l'ordre après la création.
                 </div>
               </>
             )}
 
-            {/* Tab: Options (info) */}
-            {activeTab === 'options' && (
+            {/* Step 4: Options */}
+            {currentStep === 'options' && (
               <div className="text-center py-8">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Car className="w-8 h-8 text-text-light" />
+                <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check className="w-10 h-10 text-success" />
                 </div>
-                <h3 className="font-medium text-primary mb-2">Options du véhicule</h3>
-                <p className="text-sm text-text-light">
+                <h3 className="text-xl font-semibold text-primary mb-2">Prêt à créer le véhicule</h3>
+                <p className="text-sm text-text-light max-w-md mx-auto">
                   Les options pourront être associées au véhicule après sa création.
-                  Rendez-vous sur la page de détail du véhicule pour gérer ses options.
+                  Cliquez sur "Créer le véhicule" pour finaliser.
                 </p>
+
+                {/* Récapitulatif */}
+                <div className="mt-6 bg-gray-50 rounded-lg p-4 text-left">
+                  <h4 className="font-medium text-sm mb-3">Récapitulatif</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="text-text-light">Nom:</div>
+                    <div className="font-medium">{formData.nom}</div>
+                    <div className="text-text-light">Marque / Modèle:</div>
+                    <div className="font-medium">{formData.marque} {formData.model}</div>
+                    <div className="text-text-light">Prix:</div>
+                    <div className="font-medium">{formatPrice(formData.prixBase)}</div>
+                    <div className="text-text-light">Images:</div>
+                    <div className="font-medium">{imageFiles.length} fichier(s)</div>
+                    <div className="text-text-light">Couleurs:</div>
+                    <div className="font-medium">{formData.couleurs.length > 0 ? formData.couleurs.join(', ') : 'Non définies'}</div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Footer with progress */}
+          {/* Footer with navigation */}
           <div className="border-t p-4 bg-gray-50 shrink-0">
             {loading && uploadProgress > 0 && (
               <div className="mb-4">
@@ -895,20 +1142,274 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
             )}
 
             <div className="flex gap-3">
-              <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
+              {currentStepIndex > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePrevious}
+                  disabled={loading}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Précédent
+                </Button>
+              )}
+
+              <div className="flex-1" />
+
+              <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
                 Annuler
               </Button>
-              <Button type="submit" variant="primary" className="flex-1" disabled={loading}>
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : (
-                  <Plus className="w-4 h-4 mr-2" />
-                )}
-                Créer le véhicule
-              </Button>
+
+              {currentStep !== 'options' ? (
+                <Button type="button" variant="primary" onClick={handleNext} disabled={loading}>
+                  Suivant
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              ) : (
+                <Button type="submit" variant="primary" disabled={loading}>
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Plus className="w-4 h-4 mr-2" />
+                  )}
+                  Créer le véhicule
+                </Button>
+              )}
             </div>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// Modal Détails Véhicule
+function VehiculeDetailModal({
+  vehicule,
+  onClose
+}: {
+  vehicule: Vehicule;
+  onClose: () => void;
+}) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const images = vehicule.images || [];
+  const currentImage = images[currentImageIndex]?.url || 'https://via.placeholder.com/600x400?text=No+Image';
+
+  const getColorHex = (colorName: string) => {
+    const color = PREDEFINED_COLORS.find(c => c.name.toLowerCase() === colorName.toLowerCase());
+    return color?.hex || '#808080';
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
+          <div>
+            <h2 className="text-lg font-semibold text-primary">{vehicule.nom}</h2>
+            <p className="text-sm text-text-light">{vehicule.marque} - {vehicule.model}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Images */}
+            <div>
+              <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden mb-3">
+                <img
+                  src={currentImage}
+                  alt={vehicule.nom}
+                  className="w-full h-full object-cover"
+                />
+                {vehicule.solde && (
+                  <div className="absolute top-3 left-3">
+                    <Badge variant="warning">
+                      -{vehicule.facteurReduction}% PROMO
+                    </Badge>
+                  </div>
+                )}
+                <div className="absolute top-3 right-3">
+                  <Badge variant={vehicule.engine === 'ELECTRIQUE' ? 'success' : 'default'}>
+                    {vehicule.engine === 'ELECTRIQUE' ? (
+                      <><Zap className="w-3 h-3 mr-1" /> Électrique</>
+                    ) : (
+                      <><Fuel className="w-3 h-3 mr-1" /> Essence</>
+                    )}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Thumbnails */}
+              {images.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {images.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentImageIndex(idx)}
+                      className={`shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
+                        idx === currentImageIndex ? 'border-secondary' : 'border-transparent'
+                      }`}
+                    >
+                      <img
+                        src={img.url}
+                        alt={`Image ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Détails */}
+            <div className="space-y-6">
+              {/* Prix */}
+              <div className="bg-secondary/5 rounded-lg p-4">
+                <p className="text-sm text-text-light mb-1">Prix</p>
+                {vehicule.solde && vehicule.prixOriginal ? (
+                  <div>
+                    <p className="text-2xl font-bold text-secondary">{formatPrice(vehicule.prixBase)}</p>
+                    <p className="text-sm text-text-light line-through">{formatPrice(vehicule.prixOriginal)}</p>
+                  </div>
+                ) : (
+                  <p className="text-2xl font-bold text-secondary">{formatPrice(vehicule.prixBase)}</p>
+                )}
+              </div>
+
+              {/* Informations générales */}
+              <div>
+                <h3 className="font-semibold text-primary mb-3">Informations générales</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-text-light">Type</p>
+                    <p className="font-medium">{vehicule.type}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-text-light">Année</p>
+                    <p className="font-medium">{vehicule.annee}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-text-light">Motorisation</p>
+                    <p className="font-medium">{vehicule.engine}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-text-light">Stock</p>
+                    <p className={`font-medium ${(vehicule.stock?.quantite || 0) <= 3 ? 'text-error' : 'text-success'}`}>
+                      {vehicule.stock?.quantite || 0} unités
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Caractéristiques techniques */}
+              {(vehicule.puissance || vehicule.transmission || vehicule.carburant || vehicule.consommation) && (
+                <div>
+                  <h3 className="font-semibold text-primary mb-3">Caractéristiques techniques</h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {vehicule.puissance && (
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-text-light">Puissance</p>
+                        <p className="font-medium">{vehicule.puissance}</p>
+                      </div>
+                    )}
+                    {vehicule.transmission && (
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-text-light">Transmission</p>
+                        <p className="font-medium">{vehicule.transmission}</p>
+                      </div>
+                    )}
+                    {vehicule.carburant && (
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-text-light">Carburant</p>
+                        <p className="font-medium">{vehicule.carburant}</p>
+                      </div>
+                    )}
+                    {vehicule.consommation && (
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-text-light">Consommation</p>
+                        <p className="font-medium">{vehicule.consommation}</p>
+                      </div>
+                    )}
+                    {vehicule.acceleration && (
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-text-light">0-100 km/h</p>
+                        <p className="font-medium">{vehicule.acceleration}</p>
+                      </div>
+                    )}
+                    {vehicule.vitesseMax && (
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-text-light">Vitesse max</p>
+                        <p className="font-medium">{vehicule.vitesseMax}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Couleurs disponibles */}
+              {vehicule.couleurs && vehicule.couleurs.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-primary mb-3">Couleurs disponibles</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {vehicule.couleurs.map((color, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 bg-gray-50 rounded-full px-3 py-1.5"
+                      >
+                        <div
+                          className="w-4 h-4 rounded-full border border-gray-300"
+                          style={{ backgroundColor: getColorHex(color) }}
+                        />
+                        <span className="text-sm">{color}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Description */}
+              {vehicule.description && (
+                <div>
+                  <h3 className="font-semibold text-primary mb-3">Description</h3>
+                  <p className="text-sm text-text-light">{vehicule.description}</p>
+                </div>
+              )}
+
+              {/* Options */}
+              {vehicule.options && vehicule.options.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-primary mb-3">Options disponibles</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {vehicule.options.map((opt) => (
+                      <span
+                        key={opt.idOption}
+                        className="bg-secondary/10 text-secondary px-3 py-1 rounded-full text-sm"
+                      >
+                        {opt.nom}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t p-4 bg-gray-50 shrink-0 flex justify-end gap-3">
+          <Button variant="outline" onClick={onClose}>
+            Fermer
+          </Button>
+          <Button variant="primary">
+            <Edit className="w-4 h-4 mr-2" />
+            Modifier
+          </Button>
+        </div>
       </div>
     </div>
   );

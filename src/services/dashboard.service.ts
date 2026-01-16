@@ -67,14 +67,17 @@ export const dashboardService = {
       const parMois: Record<string, { montant: number; count: number }> = {};
 
       commandes.forEach(c => {
-        if (!c.dateCommande) return;
-        const date = new Date(c.dateCommande);
+        // Utiliser date (backend) ou dateCommande (frontend alias)
+        const dateStr = c.date || c.dateCommande;
+        if (!dateStr) return;
+        const date = new Date(dateStr);
         const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 
         if (!parMois[key]) {
           parMois[key] = { montant: 0, count: 0 };
         }
-        parMois[key].montant += c.montantTTC || 0;
+        // Utiliser total (backend) ou montantTTC (frontend alias)
+        parMois[key].montant += c.total || c.montantTTC || 0;
         parMois[key].count += 1;
       });
 
@@ -119,8 +122,10 @@ export const dashboardService = {
       let total = 0;
       commandes.forEach(c => {
         if (c.paysLivraison && parPays[c.paysLivraison] !== undefined) {
-          parPays[c.paysLivraison] += c.montantTTC || 0;
-          total += c.montantTTC || 0;
+          // Utiliser total (backend) ou montantTTC (frontend alias)
+          const montant = c.total || c.montantTTC || 0;
+          parPays[c.paysLivraison] += montant;
+          total += montant;
         }
       });
 

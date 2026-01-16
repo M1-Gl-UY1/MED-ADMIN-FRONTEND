@@ -58,7 +58,7 @@ export const vehiculeService = {
    */
   async create(data: CreateVehiculeDTO): Promise<Vehicule> {
     // Utiliser l'endpoint custom qui utilise l'Abstract Factory
-    const response = await api.post<Vehicule>(`${ENDPOINTS.VEHICULES_CUSTOM}/`, data);
+    const response = await api.post<Vehicule>(ENDPOINTS.VEHICULES_CUSTOM, data);
     return response.data;
   },
 

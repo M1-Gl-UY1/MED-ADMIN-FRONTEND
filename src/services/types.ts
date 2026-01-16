@@ -63,6 +63,9 @@ export interface Vehicule {
   solde: boolean;
   facteurReduction?: number;
   nouveau?: boolean;
+  // Decorator pattern (prix modifié par le backend)
+  prixOriginal?: number;
+  decorated?: boolean;
 }
 
 export interface Client {
@@ -127,19 +130,23 @@ export interface Document {
 
 export interface Commande {
   idCommande: number;
+  id?: number; // Alias backend
   reference: string;
   utilisateur: Utilisateur;
-  statut: StatutCommande;
+  statut: StatutCommande | string;
   paysLivraison: PaysLivraison;
   adresseLivraison: string;
   methodePaiement: MethodePaiement;
   montantHT: number;
   taxes: number;
   montantTTC: number;
+  total?: number; // Alias backend
   dateCommande: string;
+  date?: string; // Alias backend
   dateLivraison?: string | null;
   lignes: LigneCommande[];
   documents: Document[];
+  type?: string; // Type de commande (comptant/credit)
 }
 
 // DTOs Admin

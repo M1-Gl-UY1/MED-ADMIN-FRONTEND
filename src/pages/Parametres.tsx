@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   User,
   Bell,
@@ -7,9 +7,13 @@ import {
   Save,
   Eye,
   EyeOff,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
-import { Card, CardContent, CardHeader, CardTitle, Button } from '../components/ui';
+import { Card, CardContent, CardHeader, CardTitle, Button, Alert } from '../components/ui';
+import { useAuth } from '../context/AuthContext';
 
 type SettingsTab = 'profile' | 'notifications' | 'security' | 'appearance';
 
@@ -66,49 +70,167 @@ export default function Parametres() {
 }
 
 function ProfileSettings() {
+  const { admin, updateProfile, error, clearError } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const [formData, setFormData] = useState({
+    nom: '',
+    telephone: '',
+    adresse: '',
+    ville: '',
+    pays: '',
+  });
+
+  useEffect(() => {
+    if (admin) {
+      setFormData({
+        nom: admin.nom || '',
+        telephone: admin.telephone || '',
+        adresse: admin.adresse || '',
+        ville: admin.ville || '',
+        pays: admin.pays || '',
+      });
+    }
+  }, [admin]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setSuccess(false);
+    clearError();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setSuccess(false);
+    clearError();
+
+    const result = await updateProfile(formData);
+    setIsLoading(false);
+
+    if (result) {
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Informations du profil</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-6 mb-6">
-          <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center">
-            <User className="w-10 h-10 text-secondary" />
+        <form onSubmit={handleSubmit}>
+          <div className="flex items-center gap-6 mb-6">
+            <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center">
+              <User className="w-10 h-10 text-secondary" />
+            </div>
+            <div>
+              <p className="font-medium text-text">{admin?.nom || 'Administrateur'}</p>
+              <p className="text-sm text-text-light">{admin?.email}</p>
+            </div>
           </div>
-          <div>
-            <Button variant="outline" size="sm">
-              Changer la photo
+
+          {error && (
+            <Alert variant="error" className="mb-4">
+              <AlertCircle className="w-5 h-5" />
+              <span>{error}</span>
+            </Alert>
+          )}
+
+          {success && (
+            <Alert variant="success" className="mb-4">
+              <CheckCircle className="w-5 h-5" />
+              <span>Profil mis a jour avec succes</span>
+            </Alert>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-text mb-1">Nom</label>
+              <input
+                type="text"
+                name="nom"
+                value={formData.nom}
+                onChange={handleChange}
+                className="input"
+                placeholder="Votre nom"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-text mb-1">Email</label>
+              <input
+                type="email"
+                value={admin?.email || ''}
+                className="input bg-gray-100"
+                disabled
+              />
+              <p className="text-xs text-text-light mt-1">L'email ne peut pas etre modifie</p>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-text mb-1">Telephone</label>
+              <input
+                type="tel"
+                name="telephone"
+                value={formData.telephone}
+                onChange={handleChange}
+                className="input"
+                placeholder="+33 6 12 34 56 78"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-text mb-1">Adresse</label>
+              <input
+                type="text"
+                name="adresse"
+                value={formData.adresse}
+                onChange={handleChange}
+                className="input"
+                placeholder="123 Rue Example"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text mb-1">Ville</label>
+              <input
+                type="text"
+                name="ville"
+                value={formData.ville}
+                onChange={handleChange}
+                className="input"
+                placeholder="Paris"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text mb-1">Pays</label>
+              <input
+                type="text"
+                name="pays"
+                value={formData.pays}
+                onChange={handleChange}
+                className="input"
+                placeholder="France"
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <Button type="submit" variant="primary" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Enregistrement...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Enregistrer
+                </>
+              )}
             </Button>
-            <p className="text-xs text-text-light mt-2">JPG, PNG ou GIF. Max 2MB.</p>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-text mb-1">Prénom</label>
-            <input type="text" defaultValue="Admin" className="input" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-text mb-1">Nom</label>
-            <input type="text" defaultValue="User" className="input" />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-text mb-1">Email</label>
-            <input type="email" defaultValue="admin@med.com" className="input" />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-text mb-1">Téléphone</label>
-            <input type="tel" defaultValue="+33 6 12 34 56 78" className="input" />
-          </div>
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <Button variant="primary">
-            <Save className="w-4 h-4 mr-2" />
-            Enregistrer
-          </Button>
-        </div>
+        </form>
       </CardContent>
     </Card>
   );
@@ -180,67 +302,168 @@ function SecuritySettings({
   showPassword: boolean;
   setShowPassword: (show: boolean) => void;
 }) {
+  const { changePassword, error, clearError } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const [passwords, setPasswords] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswords((prev) => ({ ...prev, [name]: value }));
+    setSuccess(false);
+    setLocalError(null);
+    clearError();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLocalError(null);
+    clearError();
+
+    if (passwords.newPassword !== passwords.confirmPassword) {
+      setLocalError('Les mots de passe ne correspondent pas');
+      return;
+    }
+
+    if (passwords.newPassword.length < 6) {
+      setLocalError('Le nouveau mot de passe doit contenir au moins 6 caracteres');
+      return;
+    }
+
+    setIsLoading(true);
+    setSuccess(false);
+
+    const result = await changePassword({
+      currentPassword: passwords.currentPassword,
+      newPassword: passwords.newPassword,
+    });
+
+    setIsLoading(false);
+
+    if (result) {
+      setSuccess(true);
+      setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(() => setSuccess(false), 3000);
+    }
+  };
+
+  const displayError = localError || error;
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sécurité du compte</CardTitle>
+        <CardTitle>Securite du compte</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
-          <div>
-            <h4 className="font-medium text-text mb-4">Changer le mot de passe</h4>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Mot de passe actuel</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    className="input pr-10"
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-light"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Nouveau mot de passe</label>
-                <input type="password" className="input" placeholder="••••••••" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Confirmer le mot de passe</label>
-                <input type="password" className="input" placeholder="••••••••" />
-              </div>
-            </div>
-          </div>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-6">
+            <div>
+              <h4 className="font-medium text-text mb-4">Changer le mot de passe</h4>
 
-          <div className="pt-6 border-t border-gray-100">
-            <h4 className="font-medium text-text mb-4">Authentification à deux facteurs</h4>
-            <div className="p-4 bg-background rounded-lg flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Shield className="w-6 h-6 text-text-light" />
+              {displayError && (
+                <Alert variant="error" className="mb-4">
+                  <AlertCircle className="w-5 h-5" />
+                  <span>{displayError}</span>
+                </Alert>
+              )}
+
+              {success && (
+                <Alert variant="success" className="mb-4">
+                  <CheckCircle className="w-5 h-5" />
+                  <span>Mot de passe modifie avec succes</span>
+                </Alert>
+              )}
+
+              <div className="space-y-4">
                 <div>
-                  <p className="font-medium text-text">2FA désactivé</p>
-                  <p className="text-sm text-text-light">Ajoutez une couche de sécurité supplémentaire</p>
+                  <label className="block text-sm font-medium text-text mb-1">Mot de passe actuel</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="currentPassword"
+                      value={passwords.currentPassword}
+                      onChange={handleChange}
+                      className="input pr-10"
+                      placeholder="••••••••"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-light"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text mb-1">Nouveau mot de passe</label>
+                  <input
+                    type="password"
+                    name="newPassword"
+                    value={passwords.newPassword}
+                    onChange={handleChange}
+                    className="input"
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                  />
+                  <p className="text-xs text-text-light mt-1">Minimum 6 caracteres</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text mb-1">Confirmer le mot de passe</label>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    value={passwords.confirmPassword}
+                    onChange={handleChange}
+                    className="input"
+                    placeholder="••••••••"
+                    required
+                  />
                 </div>
               </div>
-              <Button variant="outline" size="sm">
-                Activer
-              </Button>
+            </div>
+
+            <div className="pt-6 border-t border-gray-100">
+              <h4 className="font-medium text-text mb-4">Authentification a deux facteurs</h4>
+              <div className="p-4 bg-background rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Shield className="w-6 h-6 text-text-light" />
+                  <div>
+                    <p className="font-medium text-text">2FA desactive</p>
+                    <p className="text-sm text-text-light">Ajoutez une couche de securite supplementaire</p>
+                  </div>
+                </div>
+                <Button type="button" variant="outline" size="sm" disabled>
+                  Bientot disponible
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="mt-6 flex justify-end">
-          <Button variant="primary">
-            <Save className="w-4 h-4 mr-2" />
-            Enregistrer
-          </Button>
-        </div>
+          <div className="mt-6 flex justify-end">
+            <Button type="submit" variant="primary" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Enregistrement...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Enregistrer
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
       </CardContent>
     </Card>
   );
