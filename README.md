@@ -89,8 +89,6 @@ src/
 │   └── ProtectedRoute.tsx   # Garde de route
 ├── context/
 │   └── AuthContext.tsx      # Contexte d'authentification admin
-├── data/
-│   └── mockData.ts          # Donnees mock (dev)
 ├── hooks/                   # Hooks personnalises
 ├── lib/
 │   └── utils.ts             # Utilitaires
@@ -124,8 +122,12 @@ src/
 Creer un fichier `.env` a la racine :
 
 ```env
-VITE_API_BASE_URL=http://localhost:8085
+# Production (Backend deploye sur Render)
+VITE_API_BASE_URL=https://med-backend-zk8z.onrender.com
 VITE_API_TIMEOUT=30000
+
+# Developpement local (decommenter si necessaire)
+# VITE_API_BASE_URL=http://localhost:8085
 ```
 
 ### Cle de stockage
@@ -154,12 +156,26 @@ npm run preview
 
 ## Demarrage
 
-1. **Demarrer le backend** Spring Boot sur le port 8085
-2. **Lancer l'admin** : `npm run dev`
-3. **Acceder** a `http://localhost:5174`
-4. **Se connecter** avec `admin-med@gmail.com` / `12345678`
+### Mode Production (Backend en ligne)
+Le backend est deploye sur Render : `https://med-backend-zk8z.onrender.com`
+
+1. **Lancer l'admin** : `npm run dev`
+2. **Acceder** a `http://localhost:5174`
+3. **Se connecter** avec `admin-med@gmail.com` / `12345678`
+
+L'application se connecte automatiquement au backend en ligne.
+
+### Mode Developpement Local
+Pour utiliser un backend local :
+1. Modifier `.env` : `VITE_API_BASE_URL=http://localhost:8085`
+2. **Demarrer le backend** Spring Boot sur le port 8085
+3. **Lancer l'admin** : `npm run dev`
+4. **Acceder** a `http://localhost:5174`
 
 > **Note** : Le port 5174 est configure dans `vite.config.ts` pour eviter les conflits avec le frontend client (port 5173).
+
+### Gestion des erreurs
+Si le backend n'est pas disponible, l'application affiche des messages d'erreur clairs avec un bouton "Reessayer" permettant de recharger les donnees.
 
 ## Routes
 
