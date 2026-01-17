@@ -6,6 +6,7 @@ import {
   ShoppingCart,
   Users,
   Package,
+  Bell,
   Settings,
   X,
   ChevronLeft,
@@ -14,11 +15,12 @@ import logoMedBlanc from '../../assets/logo_med.jpeg';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Véhicules', href: '/vehicules', icon: Car },
+  { name: 'Vehicules', href: '/vehicules', icon: Car },
   { name: 'Commandes', href: '/commandes', icon: ShoppingCart },
   { name: 'Clients', href: '/clients', icon: Users },
   { name: 'Stock', href: '/stock', icon: Package },
-  { name: 'Paramètres', href: '/parametres', icon: Settings },
+  { name: 'Notifications', href: '/notifications', icon: Bell },
+  { name: 'Parametres', href: '/parametres', icon: Settings },
 ];
 
 export default function Layout() {

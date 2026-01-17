@@ -3,5 +3,6 @@ export { default as Vehicules } from './Vehicules';
 export { default as Commandes } from './Commandes';
 export { default as Clients } from './Clients';
 export { default as Stock } from './Stock';
+export { default as Notifications } from './Notifications';
 export { default as Parametres } from './Parametres';
 export { default as Login } from './Login';
