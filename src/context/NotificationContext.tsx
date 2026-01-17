@@ -183,10 +183,25 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Valeurs par defaut pour quand le contexte n'est pas disponible
+const defaultContextValue: NotificationContextType = {
+  notifications: [],
+  unreadCount: 0,
+  isConnected: false,
+  isLoading: false,
+  error: null,
+  markAsRead: async () => {},
+  markAllAsRead: async () => {},
+  deleteNotification: async () => {},
+  refreshNotifications: async () => {},
+};
+
 export function useNotifications() {
   const context = useContext(NotificationContext);
+  // Retourner les valeurs par defaut si le contexte n'est pas disponible
+  // (par exemple sur la page de login)
   if (context === undefined) {
-    throw new Error('useNotifications must be used within a NotificationProvider');
+    return defaultContextValue;
   }
   return context;
 }
