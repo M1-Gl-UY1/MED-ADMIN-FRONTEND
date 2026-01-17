@@ -351,12 +351,12 @@ function ClientCard({ client }: { client: Client }) {
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2.5 hover:bg-gray-100 rounded-lg transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
             >
               <MoreVertical className="w-4 h-4 text-text-light" />
             </button>
             {showMenu && (
-              <div className="absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10">
+              <div className="absolute right-0 mt-1 w-32 sm:w-36 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10">
                 <button className="w-full px-4 py-2 text-left text-sm text-text hover:bg-gray-50 flex items-center gap-2">
                   <Eye className="w-4 h-4" /> Voir
                 </button>
@@ -483,13 +483,13 @@ function AddClientModal({ onClose, onSuccess }: { onClose: () => void; onSuccess
       <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold text-primary">Ajouter un client</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+          <button onClick={onClose} className="p-2.5 hover:bg-gray-100 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Nom *</label>
               <input
@@ -534,7 +534,7 @@ function AddClientModal({ onClose, onSuccess }: { onClose: () => void; onSuccess
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Genre</label>
               <select
@@ -605,7 +605,7 @@ function AddSocieteModal({ onClose, onSuccess }: { onClose: () => void; onSucces
       <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold text-primary">Ajouter une société</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+          <button onClick={onClose} className="p-2.5 hover:bg-gray-100 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -695,7 +695,7 @@ function SocieteDetailModal({
               <p className="text-sm text-text-light">Société</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+          <button onClick={onClose} className="p-2.5 hover:bg-gray-100 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -826,7 +826,7 @@ function EditSocieteModal({
       <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold text-primary">Modifier la société</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+          <button onClick={onClose} className="p-2.5 hover:bg-gray-100 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -890,7 +890,7 @@ function EditSocieteModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Ville</label>
               <input

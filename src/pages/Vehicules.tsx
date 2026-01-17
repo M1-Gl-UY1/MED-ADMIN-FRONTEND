@@ -351,12 +351,12 @@ function VehiculeCard({
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-1.5 bg-white/90 rounded-lg hover:bg-white transition-colors"
+              className="p-2.5 bg-white/90 rounded-lg hover:bg-white transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
             >
               <MoreVertical className="w-4 h-4 text-primary" />
             </button>
             {showMenu && (
-              <div className="absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10">
+              <div className="absolute right-0 mt-1 w-32 sm:w-36 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10">
                 <button
                   onClick={() => { onView(); setShowMenu(false); }}
                   className="w-full px-4 py-2 text-left text-sm text-text hover:bg-gray-50 flex items-center gap-2"
@@ -472,7 +472,7 @@ function ColorPicker({
   onColorToggle: (colorName: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-5 gap-2">
+    <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
       {PREDEFINED_COLORS.map((color) => {
         const isSelected = selectedColors.includes(color.name);
         return (
@@ -713,7 +713,7 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b shrink-0">
           <h2 className="text-lg font-semibold text-primary">Ajouter un véhicule</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+          <button onClick={onClose} className="p-2.5 hover:bg-gray-100 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -774,7 +774,7 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
             {/* Step 1: Informations de base */}
             {currentStep === 'info' && (
               <>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">
                       Nom <span className="text-error">*</span>
@@ -803,7 +803,7 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">
                       Marque <span className="text-error">*</span>
@@ -833,7 +833,7 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Type de véhicule</label>
                     <select
@@ -858,7 +858,7 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">
                       Prix de base (FCFA) <span className="text-error">*</span>
@@ -893,7 +893,7 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                 </div>
 
                 {/* Statuts */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -934,7 +934,7 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
             {/* Step 2: Caractéristiques techniques */}
             {currentStep === 'specs' && (
               <>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Puissance</label>
                     <input
@@ -957,7 +957,7 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Carburant</label>
                     <select
@@ -985,7 +985,7 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Accélération (0-100 km/h)</label>
                     <input
@@ -1237,7 +1237,7 @@ function VehiculeDetailModal({
             <h2 className="text-lg font-semibold text-primary">{vehicule.nom}</h2>
             <p className="text-sm text-text-light">{vehicule.marque} - {vehicule.model}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+          <button onClick={onClose} className="p-2.5 hover:bg-gray-100 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -1510,7 +1510,7 @@ function EditVehiculeModal({
             <h2 className="text-lg font-semibold text-primary">Modifier le véhicule</h2>
             <p className="text-sm text-text-light">{vehicule.marque} {vehicule.nom}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+          <button onClick={onClose} className="p-2.5 hover:bg-gray-100 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -1523,7 +1523,7 @@ function EditVehiculeModal({
               <h3 className="text-sm font-semibold text-primary mb-3 uppercase tracking-wide">
                 Informations de base
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Nom *</label>
                   <input
@@ -1592,7 +1592,7 @@ function EditVehiculeModal({
               <h3 className="text-sm font-semibold text-primary mb-3 uppercase tracking-wide">
                 Caractéristiques techniques
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Puissance</label>
                   <input
@@ -1671,7 +1671,7 @@ function EditVehiculeModal({
                   </span>
                 )}
               </h3>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                 {PREDEFINED_COLORS.map((color) => {
                   const isSelected = formData.couleurs.includes(color.name);
                   return (
