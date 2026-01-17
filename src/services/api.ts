@@ -78,6 +78,12 @@ apiClient.interceptors.request.use(
     const token = getToken();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+      // Debug: log les requêtes sensibles
+      if (config.method !== 'get') {
+        console.log(`[API] ${config.method?.toUpperCase()} ${config.url} - Token: ${token.substring(0, 20)}...`);
+      }
+    } else if (config.method !== 'get') {
+      console.warn(`[API] ${config.method?.toUpperCase()} ${config.url} - NO TOKEN!`);
     }
     return config;
   },
