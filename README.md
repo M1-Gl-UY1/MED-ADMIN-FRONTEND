@@ -122,11 +122,14 @@ src/
 Creer un fichier `.env` a la racine :
 
 ```env
-# Production (Backend deploye sur Render)
-VITE_API_BASE_URL=https://med-backend-zk8z.onrender.com
+# Production (VPS Contabo)
+VITE_API_BASE_URL=http://84.247.183.206:9085
 VITE_API_TIMEOUT=30000
 
-# Developpement local (decommenter si necessaire)
+# Render (backup)
+# VITE_API_BASE_URL=https://med-backend-zk8z.onrender.com
+
+# Developpement local
 # VITE_API_BASE_URL=http://localhost:8085
 ```
 
@@ -156,14 +159,14 @@ npm run preview
 
 ## Demarrage
 
-### Mode Production (Backend en ligne)
-Le backend est deploye sur Render : `https://med-backend-zk8z.onrender.com`
+### Mode Production (Backend sur VPS)
+Le backend est deploye sur VPS Contabo : `http://84.247.183.206:9085`
 
 1. **Lancer l'admin** : `npm run dev`
 2. **Acceder** a `http://localhost:5174`
 3. **Se connecter** avec `admin-med@gmail.com` / `12345678`
 
-L'application se connecte automatiquement au backend en ligne.
+L'application se connecte automatiquement au backend en production.
 
 ### Mode Developpement Local
 Pour utiliser un backend local :
