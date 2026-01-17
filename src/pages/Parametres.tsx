@@ -236,17 +236,48 @@ function ProfileSettings() {
   );
 }
 
+const NOTIFICATION_STORAGE_KEY = 'med_admin_notification_prefs';
+
+const defaultNotificationPrefs = {
+  newOrder: true,
+  orderStatus: true,
+  lowStock: true,
+  newClient: false,
+  marketing: false,
+};
+
 function NotificationSettings() {
-  const [notifications, setNotifications] = useState({
-    newOrder: true,
-    orderStatus: true,
-    lowStock: true,
-    newClient: false,
-    marketing: false,
-  });
+  const [notifications, setNotifications] = useState(defaultNotificationPrefs);
+  const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  // Charger les préférences depuis localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(NOTIFICATION_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setNotifications({ ...defaultNotificationPrefs, ...parsed });
+      } catch {
+        // Ignorer les erreurs de parsing
+      }
+    }
+  }, []);
 
   const toggleNotification = (key: keyof typeof notifications) => {
     setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
+    setSuccess(false);
+  };
+
+  const handleSave = () => {
+    setIsLoading(true);
+    // Simuler un délai pour le feedback visuel
+    setTimeout(() => {
+      localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(notifications));
+      setIsLoading(false);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    }, 300);
   };
 
   return (
@@ -255,6 +286,13 @@ function NotificationSettings() {
         <CardTitle>Préférences de notification</CardTitle>
       </CardHeader>
       <CardContent>
+        {success && (
+          <Alert variant="success" className="mb-4">
+            <CheckCircle className="w-5 h-5" />
+            <span>Préférences enregistrées avec succès</span>
+          </Alert>
+        )}
+
         <div className="space-y-4">
           {[
             { key: 'newOrder' as const, label: 'Nouvelle commande', desc: 'Recevoir une notification pour chaque nouvelle commande' },
@@ -270,13 +308,13 @@ function NotificationSettings() {
               </div>
               <button
                 onClick={() => toggleNotification(item.key)}
-                className={`relative w-12 h-6 rounded-full transition-colors ${
+                className={`relative w-11 h-6 rounded-full transition-colors ${
                   notifications[item.key] ? 'bg-secondary' : 'bg-gray-300'
                 }`}
               >
                 <span
-                  className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                    notifications[item.key] ? 'translate-x-7' : 'translate-x-1'
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                    notifications[item.key] ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>
@@ -285,9 +323,18 @@ function NotificationSettings() {
         </div>
 
         <div className="mt-6 flex justify-end">
-          <Button variant="primary">
-            <Save className="w-4 h-4 mr-2" />
-            Enregistrer
+          <Button variant="primary" onClick={handleSave} disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Enregistrement...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Enregistrer
+              </>
+            )}
           </Button>
         </div>
       </CardContent>
@@ -431,21 +478,6 @@ function SecuritySettings({
               </div>
             </div>
 
-            <div className="pt-6 border-t border-gray-100">
-              <h4 className="font-medium text-text mb-4">Authentification a deux facteurs</h4>
-              <div className="p-4 bg-background rounded-lg flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Shield className="w-6 h-6 text-text-light" />
-                  <div>
-                    <p className="font-medium text-text">2FA desactive</p>
-                    <p className="text-sm text-text-light">Ajoutez une couche de securite supplementaire</p>
-                  </div>
-                </div>
-                <Button type="button" variant="outline" size="sm" disabled>
-                  Bientot disponible
-                </Button>
-              </div>
-            </div>
           </div>
 
           <div className="mt-6 flex justify-end">
@@ -470,63 +502,45 @@ function SecuritySettings({
 }
 
 function AppearanceSettings() {
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
-  const [language, setLanguage] = useState('fr');
+  // Note: Le thème sombre n'est pas encore implémenté dans l'application.
+  // Cette section est préparée pour une future implémentation.
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Apparence et langue</CardTitle>
+        <CardTitle>Apparence</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-text mb-3">Thème</label>
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { value: 'light' as const, label: 'Clair' },
-                { value: 'dark' as const, label: 'Sombre' },
-                { value: 'system' as const, label: 'Système' },
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setTheme(option.value)}
-                  className={`p-4 rounded-lg border-2 transition-colors ${
-                    theme === option.value
-                      ? 'border-secondary bg-secondary/10'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div
-                    className={`w-full h-20 rounded-lg mb-2 ${
-                      option.value === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
-                    }`}
-                  />
-                  <p className="font-medium text-text">{option.label}</p>
-                </button>
-              ))}
+            <div className="p-4 bg-background rounded-lg">
+              <div className="flex items-center gap-3">
+                <Palette className="w-6 h-6 text-text-light" />
+                <div>
+                  <p className="font-medium text-text">Thème clair</p>
+                  <p className="text-sm text-text-light">
+                    Le thème sombre sera disponible dans une prochaine version
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text mb-1">Langue</label>
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="input"
-            >
-              <option value="fr">Français</option>
-              <option value="en">English</option>
-              <option value="es">Español</option>
-            </select>
+            <label className="block text-sm font-medium text-text mb-3">Langue</label>
+            <div className="p-4 bg-background rounded-lg">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🇫🇷</span>
+                <div>
+                  <p className="font-medium text-text">Français</p>
+                  <p className="text-sm text-text-light">
+                    Langue par défaut de l'application
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <Button variant="primary">
-            <Save className="w-4 h-4 mr-2" />
-            Enregistrer
-          </Button>
         </div>
       </CardContent>
     </Card>

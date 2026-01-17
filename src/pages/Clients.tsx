@@ -33,6 +33,14 @@ const formatDate = (dateString: string): string => {
   }).format(date);
 };
 
+// Labels des pays
+const PAYS_LABELS: Record<string, string> = {
+  CM: 'Cameroun',
+  FR: 'France',
+  US: 'États-Unis',
+  NG: 'Nigeria',
+};
+
 export default function Clients() {
   const [activeTab, setActiveTab] = useState<TabType>('clients');
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,6 +56,8 @@ export default function Clients() {
   // Modal states
   const [showAddClientModal, setShowAddClientModal] = useState(false);
   const [showAddSocieteModal, setShowAddSocieteModal] = useState(false);
+  const [selectedSociete, setSelectedSociete] = useState<Societe | null>(null);
+  const [editingSociete, setEditingSociete] = useState<Societe | null>(null);
 
   // Charger les données depuis l'API
   const fetchData = async () => {
@@ -240,6 +250,8 @@ export default function Clients() {
                 <SocieteCard
                   key={societe.idUtilisateur}
                   societe={societe}
+                  onView={() => setSelectedSociete(societe)}
+                  onEdit={() => setEditingSociete(societe)}
                 />
               ))}
               {parentSocietes.length === 0 && (
@@ -283,6 +295,30 @@ export default function Clients() {
           onSuccess={(newSociete) => {
             setSocietes(prev => [...prev, newSociete]);
             setShowAddSocieteModal(false);
+          }}
+        />
+      )}
+
+      {/* Modal détails société */}
+      {selectedSociete && (
+        <SocieteDetailModal
+          societe={selectedSociete}
+          onClose={() => setSelectedSociete(null)}
+          onEdit={() => {
+            setEditingSociete(selectedSociete);
+            setSelectedSociete(null);
+          }}
+        />
+      )}
+
+      {/* Modal modification société */}
+      {editingSociete && (
+        <EditSocieteModal
+          societe={editingSociete}
+          onClose={() => setEditingSociete(null)}
+          onSuccess={(updated) => {
+            setSocietes(prev => prev.map(s => s.idUtilisateur === updated.idUtilisateur ? updated : s));
+            setEditingSociete(null);
           }}
         />
       )}
@@ -361,36 +397,38 @@ function ClientCard({ client }: { client: Client }) {
 
 function SocieteCard({
   societe,
+  onView,
+  onEdit,
 }: {
   societe: Societe;
+  onView: () => void;
+  onEdit: () => void;
 }) {
   return (
     <Card>
       <CardContent>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-secondary/10 rounded-xl flex items-center justify-center">
+            <div className="w-14 h-14 bg-secondary/10 rounded-xl flex items-center justify-center shrink-0">
               <Building2 className="w-7 h-7 text-secondary" />
             </div>
-            <div>
-              <h3 className="font-semibold text-primary text-lg">{societe.nom}</h3>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-primary text-lg truncate">{societe.nom}</h3>
               <p className="text-sm text-text-light">N° Taxe: {societe.numeroTaxe || 'N/A'}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <Eye className="w-4 h-4 mr-1" /> Voir
-              </Button>
-              <Button variant="ghost" size="sm">
-                <Edit className="w-4 h-4" />
-              </Button>
-            </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={onView}>
+              <Eye className="w-4 h-4 mr-1" /> Voir
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onEdit}>
+              <Edit className="w-4 h-4" />
+            </Button>
           </div>
         </div>
 
-        <div className="mt-4 flex items-center gap-4 text-sm text-text-light">
+        <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-text-light">
           <div className="flex items-center gap-1">
             <Mail className="w-4 h-4" />
             {societe.email || 'N/A'}
@@ -625,6 +663,271 @@ function AddSocieteModal({ onClose, onSuccess }: { onClose: () => void; onSucces
             <Button type="submit" variant="primary" className="flex-1" disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
               Créer
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Modal pour voir les détails d'une société
+function SocieteDetailModal({
+  societe,
+  onClose,
+  onEdit,
+}: {
+  societe: Societe;
+  onClose: () => void;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center">
+              <Building2 className="w-6 h-6 text-secondary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-primary">{societe.nom}</h2>
+              <p className="text-sm text-text-light">Société</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 space-y-6">
+          {/* Informations principales */}
+          <div>
+            <h3 className="text-sm font-semibold text-primary mb-3 uppercase tracking-wide">
+              Informations de la société
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-text-light mb-1">Raison sociale</p>
+                <p className="font-medium text-primary">{societe.nom}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-text-light mb-1">Numéro de taxe</p>
+                <p className="font-medium text-primary">{societe.numeroTaxe || 'N/A'}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-text-light mb-1">ID Système</p>
+                <p className="font-medium text-primary">#{societe.idUtilisateur}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h3 className="text-sm font-semibold text-primary mb-3 uppercase tracking-wide">
+              Contact
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Mail className="w-4 h-4 text-text-light" />
+                  <p className="text-xs text-text-light">Email</p>
+                </div>
+                <p className="font-medium text-primary">{societe.email || 'N/A'}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Phone className="w-4 h-4 text-text-light" />
+                  <p className="text-xs text-text-light">Téléphone</p>
+                </div>
+                <p className="font-medium text-primary">{societe.telephone || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Adresse */}
+          <div>
+            <h3 className="text-sm font-semibold text-primary mb-3 uppercase tracking-wide">
+              Adresse
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-gray-50 rounded-lg p-3 sm:col-span-2">
+                <p className="text-xs text-text-light mb-1">Adresse</p>
+                <p className="font-medium text-primary">{societe.adresse || 'Non renseignée'}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-text-light mb-1">Ville</p>
+                <p className="font-medium text-primary">{societe.ville || 'N/A'}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-text-light mb-1">Pays</p>
+                <p className="font-medium text-primary">
+                  {societe.pays ? (PAYS_LABELS[societe.pays] || societe.pays) : 'N/A'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t p-4 bg-gray-50 flex justify-end gap-3">
+          <Button variant="outline" onClick={onClose}>
+            Fermer
+          </Button>
+          <Button variant="primary" onClick={onEdit}>
+            <Edit className="w-4 h-4 mr-2" />
+            Modifier
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Modal pour modifier une société
+function EditSocieteModal({
+  societe,
+  onClose,
+  onSuccess,
+}: {
+  societe: Societe;
+  onClose: () => void;
+  onSuccess: (updated: Societe) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    nom: societe.nom || '',
+    telephone: societe.telephone || '',
+    adresse: societe.adresse || '',
+    ville: societe.ville || '',
+    pays: societe.pays || 'CM',
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const updated = await societeService.update(societe.idUtilisateur, formData);
+      onSuccess(updated);
+    } catch (err: any) {
+      console.error('Erreur lors de la mise à jour', err);
+      setError(err.message || 'Erreur lors de la mise à jour de la société');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold text-primary">Modifier la société</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {/* Champs non modifiables */}
+          <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+            <p className="text-xs font-medium text-text-light uppercase">Informations non modifiables</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-text-light mb-1">Email</label>
+                <input
+                  type="email"
+                  className="input bg-gray-100 cursor-not-allowed text-text-light"
+                  value={societe.email}
+                  disabled
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-text-light mb-1">Numéro de taxe</label>
+                <input
+                  type="text"
+                  className="input bg-gray-100 cursor-not-allowed text-text-light"
+                  value={societe.numeroTaxe || 'N/A'}
+                  disabled
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Champs modifiables */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Raison sociale *</label>
+            <input
+              type="text"
+              className="input"
+              value={formData.nom}
+              onChange={e => setFormData(prev => ({ ...prev, nom: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Téléphone</label>
+            <input
+              type="tel"
+              className="input"
+              value={formData.telephone}
+              onChange={e => setFormData(prev => ({ ...prev, telephone: e.target.value }))}
+              placeholder="+237 6XX XXX XXX"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Adresse</label>
+            <textarea
+              className="input min-h-[80px]"
+              value={formData.adresse}
+              onChange={e => setFormData(prev => ({ ...prev, adresse: e.target.value }))}
+              placeholder="Adresse complète..."
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Ville</label>
+              <input
+                type="text"
+                className="input"
+                value={formData.ville}
+                onChange={e => setFormData(prev => ({ ...prev, ville: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Pays</label>
+              <select
+                className="input"
+                value={formData.pays}
+                onChange={e => setFormData(prev => ({ ...prev, pays: e.target.value }))}
+              >
+                <option value="CM">Cameroun</option>
+                <option value="FR">France</option>
+                <option value="US">États-Unis</option>
+                <option value="NG">Nigeria</option>
+              </select>
+            </div>
+          </div>
+
+          {error && (
+            <div className="p-3 bg-red-50 text-error text-sm rounded-lg border border-red-200">
+              {error}
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+              Annuler
+            </Button>
+            <Button type="submit" variant="primary" className="flex-1" disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Edit className="w-4 h-4 mr-2" />}
+              Enregistrer
             </Button>
           </div>
         </form>

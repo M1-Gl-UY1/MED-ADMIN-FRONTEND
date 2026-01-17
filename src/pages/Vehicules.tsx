@@ -67,6 +67,9 @@ export default function Vehicules() {
   // Modal détails véhicule
   const [selectedVehicule, setSelectedVehicule] = useState<Vehicule | null>(null);
 
+  // Modal édition véhicule
+  const [editingVehicule, setEditingVehicule] = useState<Vehicule | null>(null);
+
   // Charger les véhicules depuis l'API
   const fetchVehicules = async () => {
     setLoading(true);
@@ -241,6 +244,7 @@ export default function Vehicules() {
               vehicule={vehicule}
               onDelete={handleDelete}
               onView={() => setSelectedVehicule(vehicule)}
+              onEdit={() => setEditingVehicule(vehicule)}
             />
           ))}
         </div>
@@ -284,6 +288,22 @@ export default function Vehicules() {
         <VehiculeDetailModal
           vehicule={selectedVehicule}
           onClose={() => setSelectedVehicule(null)}
+          onEdit={() => {
+            setEditingVehicule(selectedVehicule);
+            setSelectedVehicule(null);
+          }}
+        />
+      )}
+
+      {/* Modal Édition Véhicule */}
+      {editingVehicule && (
+        <EditVehiculeModal
+          vehicule={editingVehicule}
+          onClose={() => setEditingVehicule(null)}
+          onSuccess={(updated) => {
+            setVehicules(prev => prev.map(v => v.idVehicule === updated.idVehicule ? updated : v));
+            setEditingVehicule(null);
+          }}
         />
       )}
     </div>
@@ -293,11 +313,13 @@ export default function Vehicules() {
 function VehiculeCard({
   vehicule,
   onDelete,
-  onView
+  onView,
+  onEdit,
 }: {
   vehicule: Vehicule;
   onDelete: (id: number) => void;
   onView: () => void;
+  onEdit: () => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
 
@@ -341,7 +363,10 @@ function VehiculeCard({
                 >
                   <Eye className="w-4 h-4" /> Voir
                 </button>
-                <button className="w-full px-4 py-2 text-left text-sm text-text hover:bg-gray-50 flex items-center gap-2">
+                <button
+                  onClick={() => { onEdit(); setShowMenu(false); }}
+                  className="w-full px-4 py-2 text-left text-sm text-text hover:bg-gray-50 flex items-center gap-2"
+                >
                   <Edit className="w-4 h-4" /> Modifier
                 </button>
                 <button
@@ -1186,10 +1211,12 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
 // Modal Détails Véhicule
 function VehiculeDetailModal({
   vehicule,
-  onClose
+  onClose,
+  onEdit,
 }: {
   vehicule: Vehicule;
   onClose: () => void;
+  onEdit: () => void;
 }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -1405,11 +1432,360 @@ function VehiculeDetailModal({
           <Button variant="outline" onClick={onClose}>
             Fermer
           </Button>
-          <Button variant="primary">
+          <Button variant="primary" onClick={onEdit}>
             <Edit className="w-4 h-4 mr-2" />
             Modifier
           </Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Modal Édition Véhicule
+function EditVehiculeModal({
+  vehicule,
+  onClose,
+  onSuccess,
+}: {
+  vehicule: Vehicule;
+  onClose: () => void;
+  onSuccess: (updated: Vehicule) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    nom: vehicule.nom || '',
+    model: vehicule.model || '',
+    marque: vehicule.marque || '',
+    annee: vehicule.annee || new Date().getFullYear(),
+    prixBase: vehicule.prixBase || 0,
+    description: vehicule.description || '',
+    puissance: vehicule.puissance || '',
+    transmission: vehicule.transmission || '',
+    carburant: vehicule.carburant || '',
+    consommation: vehicule.consommation || '',
+    acceleration: vehicule.acceleration || '',
+    vitesseMax: vehicule.vitesseMax || '',
+    couleurs: vehicule.couleurs || [],
+    nouveau: vehicule.nouveau ?? true,
+    solde: vehicule.solde || false,
+    facteurReduction: vehicule.facteurReduction || 0,
+  });
+
+  const toggleColor = (colorName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      couleurs: prev.couleurs.includes(colorName)
+        ? prev.couleurs.filter(c => c !== colorName)
+        : [...prev.couleurs, colorName]
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const updated = await vehiculeService.update(vehicule.idVehicule, {
+        ...formData,
+        facteurReduction: formData.solde ? formData.facteurReduction : 0,
+      });
+      onSuccess(updated);
+    } catch (err: any) {
+      console.error('Erreur lors de la mise à jour', err);
+      setError(err.message || 'Erreur lors de la mise à jour du véhicule');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
+          <div>
+            <h2 className="text-lg font-semibold text-primary">Modifier le véhicule</h2>
+            <p className="text-sm text-text-light">{vehicule.marque} {vehicule.nom}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+          <div className="p-4 space-y-6">
+            {/* Informations de base */}
+            <div>
+              <h3 className="text-sm font-semibold text-primary mb-3 uppercase tracking-wide">
+                Informations de base
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Nom *</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={formData.nom}
+                    onChange={e => setFormData(prev => ({ ...prev, nom: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Modèle *</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={formData.model}
+                    onChange={e => setFormData(prev => ({ ...prev, model: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Marque *</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={formData.marque}
+                    onChange={e => setFormData(prev => ({ ...prev, marque: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Année *</label>
+                  <input
+                    type="number"
+                    className="input"
+                    value={formData.annee}
+                    onChange={e => setFormData(prev => ({ ...prev, annee: parseInt(e.target.value) || new Date().getFullYear() }))}
+                    min={2000}
+                    max={2030}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Prix de base (FCFA) *</label>
+                  <input
+                    type="number"
+                    className="input"
+                    value={formData.prixBase}
+                    onChange={e => setFormData(prev => ({ ...prev, prixBase: parseInt(e.target.value) || 0 }))}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  className="input min-h-[80px]"
+                  value={formData.description}
+                  onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Caractéristiques techniques */}
+            <div>
+              <h3 className="text-sm font-semibold text-primary mb-3 uppercase tracking-wide">
+                Caractéristiques techniques
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Puissance</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={formData.puissance}
+                    onChange={e => setFormData(prev => ({ ...prev, puissance: e.target.value }))}
+                    placeholder="Ex: 340 ch"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Transmission</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={formData.transmission}
+                    onChange={e => setFormData(prev => ({ ...prev, transmission: e.target.value }))}
+                    placeholder="Ex: Automatique 8 vitesses"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Carburant</label>
+                  <select
+                    className="input"
+                    value={formData.carburant}
+                    onChange={e => setFormData(prev => ({ ...prev, carburant: e.target.value }))}
+                  >
+                    <option value="">Sélectionner...</option>
+                    <option value="Essence">Essence</option>
+                    <option value="Diesel">Diesel</option>
+                    <option value="Électrique">Électrique</option>
+                    <option value="Hybride">Hybride</option>
+                    <option value="GPL">GPL</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Consommation</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={formData.consommation}
+                    onChange={e => setFormData(prev => ({ ...prev, consommation: e.target.value }))}
+                    placeholder="Ex: 9.5 L/100km"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Accélération (0-100)</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={formData.acceleration}
+                    onChange={e => setFormData(prev => ({ ...prev, acceleration: e.target.value }))}
+                    placeholder="Ex: 5.5s"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Vitesse max</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={formData.vitesseMax}
+                    onChange={e => setFormData(prev => ({ ...prev, vitesseMax: e.target.value }))}
+                    placeholder="Ex: 243 km/h"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Couleurs disponibles */}
+            <div>
+              <h3 className="text-sm font-semibold text-primary mb-3 uppercase tracking-wide">
+                Couleurs disponibles
+                {formData.couleurs.length > 0 && (
+                  <span className="ml-2 text-secondary font-normal">
+                    ({formData.couleurs.length} sélectionnée{formData.couleurs.length > 1 ? 's' : ''})
+                  </span>
+                )}
+              </h3>
+              <div className="grid grid-cols-5 gap-2">
+                {PREDEFINED_COLORS.map((color) => {
+                  const isSelected = formData.couleurs.includes(color.name);
+                  return (
+                    <button
+                      key={color.name}
+                      type="button"
+                      onClick={() => toggleColor(color.name)}
+                      className={`relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
+                        isSelected
+                          ? 'border-secondary bg-secondary/5'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      title={color.name}
+                    >
+                      <div
+                        className="w-6 h-6 rounded-full border border-gray-300 shadow-sm"
+                        style={{ backgroundColor: color.hex }}
+                      />
+                      <span className="text-xs text-text-light truncate w-full text-center">
+                        {color.name}
+                      </span>
+                      {isSelected && (
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-secondary rounded-full flex items-center justify-center">
+                          <Check className="w-2.5 h-2.5 text-white" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Statuts */}
+            <div>
+              <h3 className="text-sm font-semibold text-primary mb-3 uppercase tracking-wide">
+                Statuts
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.nouveau}
+                      onChange={e => setFormData(prev => ({ ...prev, nouveau: e.target.checked }))}
+                      className="w-4 h-4 rounded border-gray-300 text-secondary focus:ring-secondary"
+                    />
+                    <span className="text-sm">Marquer comme nouveau</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.solde}
+                      onChange={e => setFormData(prev => ({ ...prev, solde: e.target.checked }))}
+                      className="w-4 h-4 rounded border-gray-300 text-secondary focus:ring-secondary"
+                    />
+                    <span className="text-sm">En promotion</span>
+                  </label>
+                </div>
+                {formData.solde && (
+                  <div className="max-w-xs">
+                    <label className="block text-sm font-medium mb-1">Réduction (%)</label>
+                    <input
+                      type="number"
+                      className="input"
+                      value={formData.facteurReduction}
+                      onChange={e => setFormData(prev => ({ ...prev, facteurReduction: parseFloat(e.target.value) || 0 }))}
+                      min={0}
+                      max={100}
+                      step={0.01}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Info non modifiables */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-xs font-medium text-text-light uppercase mb-2">
+                Informations non modifiables ici
+              </p>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <p className="text-text-light">Type</p>
+                  <p className="font-medium">{vehicule.type}</p>
+                </div>
+                <div>
+                  <p className="text-text-light">Motorisation</p>
+                  <p className="font-medium">{vehicule.engine}</p>
+                </div>
+                <div>
+                  <p className="text-text-light">ID</p>
+                  <p className="font-medium">#{vehicule.idVehicule}</p>
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 text-error text-sm rounded-lg border border-red-200">
+                {error}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t p-4 bg-gray-50 shrink-0 flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Annuler
+            </Button>
+            <Button type="submit" variant="primary" disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Edit className="w-4 h-4 mr-2" />}
+              Enregistrer
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );
