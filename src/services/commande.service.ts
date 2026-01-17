@@ -12,6 +12,7 @@ import type {
 const ENDPOINTS = {
   COMMANDES: '/api/commandes',
   EXECUTER: (id: number) => `/api/commandes/${id}/executer`,
+  LIVRER: (id: number) => `/api/commandes/${id}/livrer`,
   ANNULER: (id: number) => `/api/commandes/${id}/annuler`,
   TOTAL: (id: number, pays: string) => `/api/commandes/${id}/total/${pays}`,
   DOCUMENTS: '/api/documents',
@@ -104,10 +105,7 @@ export const commandeService = {
    * Marquer une commande comme livrée
    */
   async marquerLivree(id: number): Promise<Commande> {
-    const response = await api.patch<Commande>(`${ENDPOINTS.COMMANDES}/${id}`, {
-      statut: 'LIVREE',
-      dateLivraison: new Date().toISOString().split('T')[0],
-    });
+    const response = await api.post<Commande>(ENDPOINTS.LIVRER(id));
     return response.data;
   },
 
