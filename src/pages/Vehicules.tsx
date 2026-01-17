@@ -338,7 +338,7 @@ function VehiculeCard({
           alt={vehicule.nom}
           className="w-full h-full object-cover"
         />
-        <div className="absolute top-3 left-3 flex gap-2">
+        <div className="absolute top-3 left-3 flex flex-col gap-2">
           <Badge variant={vehicule.engine === 'ELECTRIQUE' ? 'success' : 'default'}>
             {vehicule.engine === 'ELECTRIQUE' ? (
               <><Zap className="w-3 h-3 mr-1" /> Électrique</>
@@ -346,6 +346,11 @@ function VehiculeCard({
               <><Fuel className="w-3 h-3 mr-1" /> Essence</>
             )}
           </Badge>
+          {vehicule.solde && (vehicule.facteurReduction ?? 0) > 0 && (
+            <Badge variant="warning">
+              -{Math.round((vehicule.facteurReduction ?? 0) * 100)}%
+            </Badge>
+          )}
         </div>
         <div className="absolute top-3 right-3" onClick={e => e.stopPropagation()}>
           <div className="relative">
@@ -391,7 +396,18 @@ function VehiculeCard({
         </div>
 
         <div className="flex items-center justify-between mt-4">
-          <p className="text-xl font-bold text-secondary">{formatPrice(vehicule.prixBase)}</p>
+          <div>
+            {vehicule.solde && (vehicule.facteurReduction ?? 0) > 0 ? (
+              <>
+                <p className="text-xl font-bold text-secondary">
+                  {formatPrice(vehicule.prixBase * (1 - (vehicule.facteurReduction ?? 0)))}
+                </p>
+                <p className="text-xs text-text-light line-through">{formatPrice(vehicule.prixBase)}</p>
+              </>
+            ) : (
+              <p className="text-xl font-bold text-secondary">{formatPrice(vehicule.prixBase)}</p>
+            )}
+          </div>
           <div className="text-right">
             <p className="text-xs text-text-light">En stock</p>
             <p className={`text-sm font-semibold ${stockQuantite <= 3 ? 'text-error' : 'text-success'}`}>
@@ -673,7 +689,7 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
         quantiteStock: formData.quantiteStock,
         nouveau: formData.nouveau,
         solde: formData.solde,
-        facteurReduction: formData.solde ? formData.facteurReduction : 0,
+        facteurReduction: formData.solde ? formData.facteurReduction / 100 : 0, // Convertir % en décimal
         imageUrls: formData.imageUrls,
       };
 
@@ -1256,7 +1272,7 @@ function VehiculeDetailModal({
                 {vehicule.solde && (
                   <div className="absolute top-3 left-3">
                     <Badge variant="warning">
-                      -{vehicule.facteurReduction}% PROMO
+                      -{Math.round((vehicule.facteurReduction ?? 0) * 100)}% PROMO
                     </Badge>
                   </div>
                 )}
@@ -1298,10 +1314,12 @@ function VehiculeDetailModal({
               {/* Prix */}
               <div className="bg-secondary/5 rounded-lg p-4">
                 <p className="text-sm text-text-light mb-1">Prix</p>
-                {vehicule.solde && vehicule.prixOriginal ? (
+                {vehicule.solde && (vehicule.facteurReduction ?? 0) > 0 ? (
                   <div>
-                    <p className="text-2xl font-bold text-secondary">{formatPrice(vehicule.prixBase)}</p>
-                    <p className="text-sm text-text-light line-through">{formatPrice(vehicule.prixOriginal)}</p>
+                    <p className="text-2xl font-bold text-secondary">
+                      {formatPrice(vehicule.prixBase * (1 - (vehicule.facteurReduction ?? 0)))}
+                    </p>
+                    <p className="text-sm text-text-light line-through">{formatPrice(vehicule.prixBase)}</p>
                   </div>
                 ) : (
                   <p className="text-2xl font-bold text-secondary">{formatPrice(vehicule.prixBase)}</p>
@@ -1470,7 +1488,7 @@ function EditVehiculeModal({
     couleurs: vehicule.couleurs || [],
     nouveau: vehicule.nouveau ?? true,
     solde: vehicule.solde || false,
-    facteurReduction: vehicule.facteurReduction || 0,
+    facteurReduction: (vehicule.facteurReduction || 0) * 100, // Convertir décimal en %
   });
 
   const toggleColor = (colorName: string) => {
@@ -1490,7 +1508,7 @@ function EditVehiculeModal({
     try {
       const updated = await vehiculeService.update(vehicule.idVehicule, {
         ...formData,
-        facteurReduction: formData.solde ? formData.facteurReduction : 0,
+        facteurReduction: formData.solde ? formData.facteurReduction / 100 : 0, // Convertir % en décimal
       });
       onSuccess(updated);
     } catch (err: any) {
