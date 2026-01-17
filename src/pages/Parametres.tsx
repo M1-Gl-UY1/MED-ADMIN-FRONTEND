@@ -3,7 +3,6 @@ import {
   User,
   Bell,
   Shield,
-  Palette,
   Save,
   Eye,
   EyeOff,
@@ -15,7 +14,7 @@ import Header from '../components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle, Button, Alert } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 
-type SettingsTab = 'profile' | 'notifications' | 'security' | 'appearance';
+type SettingsTab = 'profile' | 'notifications' | 'security';
 
 export default function Parametres() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
@@ -25,7 +24,6 @@ export default function Parametres() {
     { id: 'profile' as const, label: 'Profil', icon: User },
     { id: 'notifications' as const, label: 'Notifications', icon: Bell },
     { id: 'security' as const, label: 'Sécurité', icon: Shield },
-    { id: 'appearance' as const, label: 'Apparence', icon: Palette },
   ];
 
   return (
@@ -61,7 +59,6 @@ export default function Parametres() {
             {activeTab === 'profile' && <ProfileSettings />}
             {activeTab === 'notifications' && <NotificationSettings />}
             {activeTab === 'security' && <SecuritySettings showPassword={showPassword} setShowPassword={setShowPassword} />}
-            {activeTab === 'appearance' && <AppearanceSettings />}
           </div>
         </div>
       </div>
@@ -496,52 +493,6 @@ function SecuritySettings({
             </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
-  );
-}
-
-function AppearanceSettings() {
-  // Note: Le thème sombre n'est pas encore implémenté dans l'application.
-  // Cette section est préparée pour une future implémentation.
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Apparence</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-text mb-3">Thème</label>
-            <div className="p-4 bg-background rounded-lg">
-              <div className="flex items-center gap-3">
-                <Palette className="w-6 h-6 text-text-light" />
-                <div>
-                  <p className="font-medium text-text">Thème clair</p>
-                  <p className="text-sm text-text-light">
-                    Le thème sombre sera disponible dans une prochaine version
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-text mb-3">Langue</label>
-            <div className="p-4 bg-background rounded-lg">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">🇫🇷</span>
-                <div>
-                  <p className="font-medium text-text">Français</p>
-                  <p className="text-sm text-text-light">
-                    Langue par défaut de l'application
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

@@ -6,6 +6,7 @@ import {
   ShoppingCart,
   Users,
   Package,
+  Sliders,
   Bell,
   Settings,
   X,
@@ -19,6 +20,7 @@ const navigation = [
   { name: 'Commandes', href: '/commandes', icon: ShoppingCart },
   { name: 'Clients', href: '/clients', icon: Users },
   { name: 'Stock', href: '/stock', icon: Package },
+  { name: 'Options', href: '/options', icon: Sliders },
   { name: 'Notifications', href: '/notifications', icon: Bell },
   { name: 'Parametres', href: '/parametres', icon: Settings },
 ];

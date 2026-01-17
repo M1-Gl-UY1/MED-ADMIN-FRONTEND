@@ -282,9 +282,12 @@ export default function Commandes() {
               className="input w-auto"
             >
               <option value="ALL">Tous les statuts</option>
+              <option value="EN_COURS">En cours</option>
               <option value="ACTIF">Actives</option>
               <option value="VALIDEE">Validées</option>
               <option value="CONVERTI">Converties</option>
+              <option value="LIVREE">Livrées</option>
+              <option value="ANNULEE">Annulées</option>
             </select>
           </CardContent>
         </Card>

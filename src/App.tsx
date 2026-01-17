@@ -3,7 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/layout/Layout';
-import { Dashboard, Vehicules, Commandes, Clients, Stock, Parametres, Login, Notifications } from './pages';
+import { Dashboard, Vehicules, Commandes, Clients, Stock, Options, Parametres, Login, Notifications } from './pages';
 
 function App() {
   return (
@@ -28,6 +28,7 @@ function App() {
               <Route path="commandes" element={<Commandes />} />
               <Route path="clients" element={<Clients />} />
               <Route path="stock" element={<Stock />} />
+              <Route path="options" element={<Options />} />
               <Route path="notifications" element={<Notifications />} />
               <Route path="parametres" element={<Parametres />} />
             </Route>
