@@ -936,11 +936,18 @@ function AddVehiculeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                     <input
                       type="number"
                       className="input"
-                      value={formData.facteurReduction}
-                      onChange={e => setFormData(prev => ({ ...prev, facteurReduction: parseFloat(e.target.value) || 0 }))}
-                      min={0}
+                      value={formData.facteurReduction || ''}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setFormData(prev => ({
+                          ...prev,
+                          facteurReduction: val === '' ? 0 : Math.min(100, Math.max(0, parseFloat(val)))
+                        }));
+                      }}
+                      min={1}
                       max={100}
-                      step={0.01}
+                      step={1}
+                      placeholder="Ex: 15"
                     />
                   </div>
                 )}
@@ -1473,11 +1480,13 @@ function EditVehiculeModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
-    nom: vehicule.nom || '',
+    // Utiliser nomOriginal pour éviter d'accumuler les décorations [PROMO -X%]
+    nom: vehicule.nomOriginal || vehicule.nom || '',
     model: vehicule.model || '',
     marque: vehicule.marque || '',
     annee: vehicule.annee || new Date().getFullYear(),
-    prixBase: vehicule.prixBase || 0,
+    // Utiliser prixOriginal si le véhicule est décoré
+    prixBase: vehicule.prixOriginal || vehicule.prixBase || 0,
     description: vehicule.description || '',
     puissance: vehicule.puissance || '',
     transmission: vehicule.transmission || '',
@@ -1754,11 +1763,18 @@ function EditVehiculeModal({
                     <input
                       type="number"
                       className="input"
-                      value={formData.facteurReduction}
-                      onChange={e => setFormData(prev => ({ ...prev, facteurReduction: parseFloat(e.target.value) || 0 }))}
-                      min={0}
+                      value={formData.facteurReduction || ''}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setFormData(prev => ({
+                          ...prev,
+                          facteurReduction: val === '' ? 0 : Math.min(100, Math.max(0, parseFloat(val)))
+                        }));
+                      }}
+                      min={1}
                       max={100}
-                      step={0.01}
+                      step={1}
+                      placeholder="Ex: 15"
                     />
                   </div>
                 )}

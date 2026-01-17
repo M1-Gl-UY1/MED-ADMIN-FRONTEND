@@ -64,8 +64,9 @@ export interface Vehicule {
   solde: boolean;
   facteurReduction?: number;
   nouveau?: boolean;
-  // Decorator pattern (prix modifié par le backend)
+  // Decorator pattern (prix/nom modifiés par le backend)
   prixOriginal?: number;
+  nomOriginal?: string;
   decorated?: boolean;
 }
 
