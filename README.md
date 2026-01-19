@@ -122,8 +122,8 @@ src/
 Creer un fichier `.env` a la racine :
 
 ```env
-# Production (VPS Contabo)
-VITE_API_BASE_URL=http://84.247.183.206:9085
+# Production (VPS Contabo - HTTPS)
+VITE_API_BASE_URL=https://med-backend.duckdns.org
 VITE_API_TIMEOUT=30000
 
 # Render (backup)
@@ -160,7 +160,7 @@ npm run preview
 ## Demarrage
 
 ### Mode Production (Backend sur VPS)
-Le backend est deploye sur VPS Contabo : `http://84.247.183.206:9085`
+Le backend est deploye sur VPS Contabo : `https://med-backend.duckdns.org`
 
 1. **Lancer l'admin** : `npm run dev`
 2. **Acceder** a `http://localhost:5174`
