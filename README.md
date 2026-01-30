@@ -141,6 +141,15 @@ Le token admin est stocke separement du token client :
 
 Cela permet d'avoir des sessions separees.
 
+## Deploiement Production
+
+- **URL** : https://admin-motor.duckdns.org
+- **Hebergement** : VPS Contabo (Nginx, fichiers statiques)
+- **CI/CD** : GitHub Actions — push sur `main` declenche automatiquement :
+  1. `npm ci` + `npm run build`
+  2. `rsync dist/` vers `/var/www/med-admin/` sur le VPS
+- **SSL** : Let's Encrypt (Certbot, renouvellement automatique)
+
 ## Installation
 
 ```bash
