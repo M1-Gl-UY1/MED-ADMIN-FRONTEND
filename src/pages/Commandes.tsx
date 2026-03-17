@@ -715,8 +715,8 @@ function generateFacturePDFContent(commande: Commande) {
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(108, 117, 125);
-  doc.text('MED Auto - 123 Avenue de l\'Indépendance, Douala, Cameroun', 105, 280, { align: 'center' });
-  doc.text('+237 699 000 000 | contact@med-auto.cm', 105, 285, { align: 'center' });
+  doc.text('MED Auto - Byem-assi, Yaounde, Cameroun', 105, 280, { align: 'center' });
+  doc.text('+237 656 146 518 | tiomelajorel@gmail.com', 105, 285, { align: 'center' });
 
   doc.save(`Facture_${reference}.pdf`);
 }
@@ -875,8 +875,8 @@ function generateBonCommandePDFContent(commande: Commande) {
 
   // Pied de page
   doc.setFontSize(8);
-  doc.text('MED Auto - 123 Avenue de l\'Indépendance, Douala, Cameroun', 105, 280, { align: 'center' });
-  doc.text('+237 699 000 000 | contact@med-auto.cm', 105, 285, { align: 'center' });
+  doc.text('MED Auto - Byem-assi, Yaounde, Cameroun', 105, 280, { align: 'center' });
+  doc.text('+237 656 146 518 | tiomelajorel@gmail.com', 105, 285, { align: 'center' });
 
   doc.save(`BonCommande_${reference}.pdf`);
 }
